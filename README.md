@@ -3,6 +3,18 @@
 </div>
 
 ### 一个简单的P2P聊天室 支持文件传输 支持屏幕共享
+![Static Badge](https://img.shields.io/badge/Test-passing-%232ebc4e)
+![Static Badge](https://img.shields.io/badge/Version-Beta-blue)
+![Static Badge](https://img.shields.io/badge/VUE-3.2.13-green)
+
+
+<div>
+<img src="./client/src/assets/1.jpg" width="40%"/>
+<img src="./client/src/assets/2.jpg" width="40%"/>
+</div>
+
+
+
 
 ## [DEMO](https://et.aman.icu)
 
