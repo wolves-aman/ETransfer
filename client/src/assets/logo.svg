@@ -1,0 +1,13 @@
+<svg height="32" viewBox="0 0 90 19" fill="#f00" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="paint0_linear_7_2" x1="4.02237" y1="9.46943e-08" x2="8.24281" y2="16.4905"
+                        gradientUnits="userSpaceOnUse">
+            <stop stop-color="#10b981"></stop>
+            <stop offset="1" stop-color="#0b825a"></stop>
+        </linearGradient>
+    </defs>
+    <g fill="url(#paint0_linear_7_2)">
+        <text x="0" y="16" font-weight="bold" font-size="18">E</text>
+        <text x="8.5" y="16" font-weight="bold" font-size="18">Transfer</text>
+    </g>
+</svg>
