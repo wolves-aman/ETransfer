@@ -45,7 +45,7 @@
                         </div>
                     </div>
                     <div class="pt-2 pl-3 pr-3 pb-3 md:pl-4 md:pr-4  md:pb-4 flex flex-column mt-auto border-top-1 surface-border gap-3" >
-                        <div v-if="isSend" class="flex align-items-center tools">
+                        <div v-if="canSend" class="flex align-items-center tools">
                             <span  class="pi pi-file text-400 hover:text-primary-300 cursor-pointer text-xl" v-tooltip="'发送文件'"  @click="chooseFile" />
                             <input type="file" ref="file" @change="sendFile" class="aman-file">
                             <span class="ml-4 pi pi-desktop text-400 hover:text-primary-300 cursor-pointer text-xl"  v-tooltip="'分享屏幕'"  @click="shareScreen" aria-disabled="true"></span>
@@ -56,9 +56,9 @@
                             <span class="ml-4 pi pi-desktop text-300 text-xl"></span>
                         </div>
                         <div class="flex align-items-center w-full">
-                            <InputText class="w-full flex-1 " v-model="message" placeholder="Search"  :disabled="!isSend" @keydown.enter="sendMsg"/>
+                            <InputText class="w-full flex-1 " v-model="message" placeholder="Search"  :disabled="!canSend" @keydown.enter="sendMsg"/>
                             <div class="w-full block w-auto ml-2">
-                                <Button  icon="pi pi-send" iconPos="left" :disabled="!isSend" @click="sendMsg"/>
+                                <Button  icon="pi pi-send" iconPos="left" :disabled="!canSend" @click="sendMsg"/>
                             </div>
                         </div>
                     </div>
@@ -90,7 +90,7 @@ export default {
     props: {
         roomId: String,
         isConnected: Boolean,
-        isSend: Boolean,
+        canSend: Boolean,
         messages: Array
     },
     emits: ["sendMsg",'chooseFile','shareScreen'],

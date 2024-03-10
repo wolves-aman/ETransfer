@@ -1,18 +1,26 @@
 <template>
     <Header></Header>
-    <div class="body">
+    <div class="body" :class="{isResize:isResize}">
         <Loading v-if="!wsConnection" :hint="hint"></Loading>
         <CreateRoom v-if="wsConnection && !isCreatedRoom" @createRoom="createRoom"></CreateRoom>
         <Room v-if="wsConnection && isCreatedRoom" :room-id="roomId" :is-connected="isConnected"
-              :is-send="isSend" :messages="messages"
+              :can-send="canSend" :messages="messages"
               @sendMsg="sendPcMsg"
               @share-screen="createScreenShare"
               @choose-file="startSendFile"></Room>
-        <div v-show="showScreenShare" ref="screen" id="screen"
-             draggable="true"
-             @dragstart="dragStartScreen"
-             @drag="dragEndScreen">
-            <video ref="screenVideo" autoplay></video>
+        <div v-show="showScreenShare" ref="screen" id="screen" draggable="true"
+             @dragstart.self="dragStartScreen"
+             @drag.self="dragEndScreen">
+            <video ref="screenVideo" autoplay poster="data:image/png;base64,"></video>
+            <div class="point top" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
+            <div class="point left" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
+            <div class="point right" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
+            <div class="point bottom" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
+            <div class="point top-left" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
+            <div class="point top-right" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
+            <div class="point bottom-left" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
+            <div class="point bottom-right" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
+
             <div class="tools text-right">
                 <i class="pi pi-window-minimize mr-4" @click="exitFullScreen"></i>
                 <i class="pi pi-window-maximize" @click="fullScreen"></i>
@@ -39,7 +47,7 @@ import Toast from "primevue/toast";
 
 let confirm, toast;
 let ws = null;
-let pc = null, sendTextChannel;
+let pc = null, sendTextChannel,screenShareStream;
 export default {
     name: 'App',
     components: {
@@ -56,7 +64,7 @@ export default {
             wsConnection: false, //ws是否连接
             isCreatedRoom: false, //是否创建了房间
             isConnected: false,//房间用户连接
-            isSend: false,//是否可以发送消息
+            canSend: false,//是否可以发送消息
             messages: [],
             fileChannelMap: {},
             hint: "",
@@ -65,7 +73,14 @@ export default {
             screenStartLeft: 0,
             screenStartTop: 0,
             showScreenShare: false,
-            webSocketHeartInterval: null
+            webSocketHeartInterval: null,
+            isResize: false,
+            clientX: 0,
+            clientY: 0,
+            // div可修改的最小宽高
+            minW: 100,
+            minH: 100,
+            direc: ""
 
         }
     },
@@ -77,11 +92,91 @@ export default {
         this.initWebSocket()
         this.initPeerConnection()
         this.$nextTick(() => {
-            this.$refs.screenVideo.addEventListener("touchstart",this.touchStartScreen)
-            this.$refs.screenVideo.addEventListener("touchmove",this.touchEndScreen)
+            this.$refs.screenVideo.addEventListener("touchstart", this.touchStartScreen)
+            this.$refs.screenVideo.addEventListener("touchmove", this.touchEndScreen)
+            document.addEventListener("mouseup", this.stopResizeScreen)
+            document.addEventListener("touchend", this.stopResizeScreen)
+            document.addEventListener("mousemove", this.resizeScreen)
+            document.addEventListener("touchmove", this.resizeScreen)
         })
     },
     methods: {
+        startResizeScreen(e) {
+            if(e.type==='touchmove'){
+                e = e.touches[0]
+            }else{
+                e.preventDefault();
+            }
+
+            let d = this.getDirection(e)
+            if (d !== '') {
+                this.isResize = true
+                this.direc = d
+                this.clientX = e.clientX
+                this.clientY = e.clientY
+            }
+        },
+        stopResizeScreen() {
+            this.isResize = false
+        },
+        resizeScreen(e) {
+            if (this.isResize) {
+                let currentClientX=e.clientX;
+                let currentClientY=e.clientY;
+                if(e.type==='touchmove'){
+                    currentClientX = e.touches[0].clientX
+                    currentClientY = e.touches[0].clientY
+                }
+                // 鼠标按下的位置在右边，修改宽度
+                if (this.direc.indexOf('right') !== -1) {
+                    this.$refs.screen.style.width = Math.max(this.minW, this.$refs.screen.offsetWidth + (currentClientX - this.clientX)) + 'px'
+                    this.clientX = currentClientX
+                }
+                // 鼠标按下的位置在上部，修改高度
+                if (this.direc.indexOf('top') !== -1) {
+
+                    const height = this.$refs.screen.offsetHeight + (this.clientY - currentClientY)
+                    const top = (this.$refs.screen.offsetTop - (this.clientY - currentClientY)) ;
+                    if (height > this.minH && top>=0) {
+                        this.$refs.screen.style.height = height + 'px'
+                        this.$refs.screen.style.top = top+ 'px'
+                    }
+                    this.clientY = currentClientY
+                }
+                // 鼠标按下的位置在底部，修改高度
+                if (this.direc.indexOf('bottom') !== -1) {
+                    this.$refs.screen.style.height = Math.max(this.minH, this.$refs.screen.offsetHeight + (currentClientY - this.clientY)) + 'px'
+                    this.clientY = currentClientY
+                }
+
+                // 鼠标按下的位置在左边，修改宽度
+                if (this.direc.indexOf('left') !== -1) {
+                    const width = this.$refs.screen.offsetWidth + (this.clientX - currentClientX)
+                    const left = (this.$refs.screen.offsetLeft - (this.clientX - currentClientX));
+                    if (width > this.minW && left>=0) {
+                        this.$refs.screen.style.width = width + 'px'
+                        this.$refs.screen.style.left = left + 'px'
+                    }
+                    this.clientX = currentClientX
+                }
+            }
+
+        },
+        // 获取鼠标所在div的位置
+        getDirection(ev) {
+            let dir = ''
+            if (ev.target.className.indexOf('top') >= 0) {
+                dir += 'top'
+            } else if (ev.target.className.indexOf('bottom') >= 0) {
+                dir += 'bottom'
+            }
+            if (ev.target.className.indexOf('left') >= 0) {
+                dir += 'left'
+            } else if (ev.target.className.indexOf('right') >= 0) {
+                dir += 'right'
+            }
+            return dir
+        },
         getRoomId() {
             this.roomId = window.location.hash.substring(2)
             return this.roomId !== ""
@@ -128,7 +223,7 @@ export default {
                             acceptClass: 'p-button-warning',
                         });
                     } else {
-                        history.pushState({}, "", "/#/"+data.room_id);
+                        history.pushState({}, "", "/#/" + data.room_id);
                         this.roomId = data.room_id
                         this.isCreatedRoom = true;
                     }
@@ -158,9 +253,9 @@ export default {
                     })
                     this.isConnected = false
                     sendTextChannel.close()
-                    sendTextChannel=null
+                    sendTextChannel = null
                     pc.close()
-                    pc=null
+                    pc = null
                     this.initPeerConnection()
                     break;
                 case "CLOSE_ROOM":
@@ -229,23 +324,23 @@ export default {
             this.isConnected = false;
             this.hint = "webSocket服务已断开"
         },
-        webSocketHeart(){
+        webSocketHeart() {
             //心跳
             this.webSocketHeartInterval = setInterval(() => {
-                if(!this.wsConnection && this.webSocketHeartInterval){
+                if (!this.wsConnection && this.webSocketHeartInterval) {
                     clearInterval(this.webSocketHeartInterval)
                     return
                 }
                 this.sendMsg({
                     action: "HEART_BEAT"
                 })
-            },10000)
+            }, 10000)
         },
         initPeerConnection() {
             if (pc === null) {
-                pc = new RTCPeerConnection( window.WEBRTC_CONFIG)
-                pc.oniceconnectionstatechange = function(event) {
-                    console.log('oniceconnectionstatechange',event);
+                pc = new RTCPeerConnection(window.WEBRTC_CONFIG)
+                pc.oniceconnectionstatechange = function (event) {
+                    console.log('oniceconnectionstatechange', event);
                 };
                 sendTextChannel = pc.createDataChannel("sendDataChannel")
                 sendTextChannel.onopen = this.onSendTextChannelStateChange;
@@ -270,16 +365,16 @@ export default {
             if (e.channel.label === "sendDataChannel") {
                 e.channel.onmessage = (event) => {
                     let data = JSON.parse(event.data)
-                    if(data.type === "close_screen") {
+                    if (data.type === "close_screen") {
                         this.showScreenShare = false
-                        this.$refs.screenVideo.srcObject =null
+                        this.$refs.screenVideo.srcObject = null
                         toast.add({
                             severity: 'warn',
                             summary: '提示',
                             detail: "屏幕共享已结束",
                             life: 3000
                         })
-                    }else{
+                    } else {
                         this.messages.push({
                             data: data,
                             from: "other",
@@ -287,7 +382,7 @@ export default {
                         })
                     }
                 }
-            }else {
+            } else {
                 let channelName = e.channel.label;
                 e.channel.onmessage = (event) => {
                     console.log(channelName, event.data.byteLength)
@@ -308,8 +403,11 @@ export default {
         },
         onSendTextChannelStateChange() {
             const readyState = sendTextChannel.readyState;
-            this.isSend = readyState === 'open'
-            console.log('onSendTextChannelStateChange is: ' + readyState);
+            this.canSend = readyState === 'open'
+            if(!this.canSend && screenShareStream){
+                screenShareStream.getTracks().forEach(track => track.stop());
+                screenShareStream=null
+            }
         },
         sendPcMsg(data) {
             if (sendTextChannel.readyState === 'open') {
@@ -322,7 +420,7 @@ export default {
             }
 
         },
-        createAndSendOffer(){
+        createAndSendOffer() {
             pc.createOffer().then((desc) => {
                 console.log("创建offer", desc)
                 console.log("设置本地offer", desc)
@@ -340,7 +438,7 @@ export default {
             if (file.size === 0) {
                 return
             }
-            if(!this.isSend){
+            if (!this.canSend) {
                 toast.add({
                     severity: 'warn',
                     summary: '错误',
@@ -436,12 +534,14 @@ export default {
 
         },
         createScreenShareSuccess(stream) {
+            screenShareStream=stream
             stream.getTracks().forEach(track => {
-                pc.addTrack(track,stream)
+                pc.addTrack(track, stream)
             });
             stream.getVideoTracks()[0].addEventListener('ended', () => {
                 let data = {type: "close_screen"};
                 this.sendPcMsg(data)
+                screenShareStream=null
                 toast.add({
                     severity: 'warn',
                     summary: '提示',
@@ -452,6 +552,7 @@ export default {
             this.createAndSendOffer()
         },
         createScreenShareError(error) {
+            screenShareStream=null
             toast.add({
                 severity: 'error',
                 summary: '分享屏幕错误',
@@ -525,7 +626,7 @@ export default {
             }
         },
         exitFullScreen() {
-            if(this.isFullScreen()){
+            if (this.isFullScreen()) {
                 let exitFullScreen = document.exitFullscreen ||
                     document.mozCancelFullScreen ||
                     document.webkitExitFullscreen ||
@@ -599,12 +700,10 @@ header {
 
 #screen {
     position: fixed;
-    left: 0;
-    top: 62px;
-    max-height: 300px;
-    max-width: 400px;
-    width:33vw;
-    height: 33vw;
+    left: 100px;
+    top: 260px;
+    width: 33vw;
+    height: 25vw;
     background: #000;
     z-index: 10;
 }
@@ -624,6 +723,7 @@ header {
 
 #screen .tools:hover {
     background: rgba(255, 255, 255, .3);
+    transition: all .3s;
 }
 
 #screen .tools:hover > .pi {
@@ -636,5 +736,78 @@ header {
     color: #fff;
     cursor: pointer;
     display: none;
+}
+
+.isResize {
+    user-select: none;
+}
+
+.point {
+    position: absolute;
+    z-index: 3;
+}
+
+.top {
+    top: -1px;
+    left: 10px;
+    height: 6px;
+    width: calc(100% - 20px);
+    cursor: s-resize;
+}
+
+.bottom {
+    bottom: -1px;
+    left: 10px;
+    height: 6px;
+    width: calc(100% - 20px);
+    cursor: s-resize;
+}
+
+.left {
+    left: -1px;
+    top: 10px;
+    width: 6px;
+    height: calc(100% - 20px);
+    cursor: e-resize;
+}
+
+.right {
+    right: -1px;
+    top: 10px;
+    width: 6px;
+    height: calc(100% - 20px);
+    cursor: e-resize;
+}
+
+.top-left {
+    top: -1px;
+    left: -1px;
+    width: 10px;
+    height: 10px;
+    cursor: se-resize;
+}
+
+.bottom-left {
+    bottom: -1px;
+    left: -1px;
+    width: 10px;
+    height: 10px;
+    cursor: sw-resize;
+}
+
+.top-right {
+    top: -1px;
+    right: -1px;
+    width: 10px;
+    height: 10px;
+    cursor: sw-resize;
+}
+
+.bottom-right {
+    bottom: -1px;
+    right: -1px;
+    width: 10px;
+    height: 10px;
+    cursor: se-resize;
 }
 </style>

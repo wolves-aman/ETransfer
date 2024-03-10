@@ -16,11 +16,15 @@
 
 
 
-## [DEMO](https://et.aman.icu)
+## [示例网站](https://et.aman.icu)
 
 ## 服务端（server目录）
 
-### run
+### 安装
+```shell
+cd ./server && npm install
+```
+### 运行
 ```shell
 node  ./server/server.js
 ```
@@ -28,25 +32,22 @@ node  ./server/server.js
 ## 客户端 （client目录）
 vue3 + primevue
 
-### install
+### 安装
 ```shell
-yarn install
+cd ./client && yarn install
 ```
 
-### run
+### 运行
 ```shell
-yarn serve
+cd ./client && yarn serve
 ```
 
-### build
+### 编译
 ```shell
-yarn build
+cd ./client && yarn build
 ```
 
-### Lints and fixes files
-```shell
-yarn lint
-```
+
 
 ### TODO
 * 屏幕共享改变大小

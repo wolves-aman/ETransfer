@@ -6,10 +6,11 @@ import {nanoid} from 'nanoid'
 
 const wss = new WebSocketServer({port: 9090});
 
-
+wss.on('listening', function () {
+    console.log('WebSocket server is running on port 9090');
+})
 //如果有WebSocket请求接入，wss对象可以响应connection事件来处理这个WebSocket：
 wss.on('connection', function (client) {
-    console.info(`[SERVER] connection`);
     let thisRoom;
     client.on('message', function (message) {
         const msg = formatMsg(message)
@@ -54,6 +55,8 @@ wss.on('connection', function (client) {
                 break
             case "TRANSFER":
                 thisRoom.sendMsgToOtherUser(client, msg);
+                break
+            case "HEART_BEAT":
                 break
             default :
                 console.warn("未知消息",msg)
