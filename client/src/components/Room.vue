@@ -56,7 +56,7 @@
                             <span class="ml-4 pi pi-desktop text-300 text-xl"></span>
                         </div>
                         <div class="flex align-items-center w-full">
-                            <InputText class="w-full flex-1 " v-model="message" placeholder="Search"  :disabled="!canSend" @keydown.enter="sendMsg"/>
+                            <InputText class="w-full flex-1 " v-model="message" :placeholder="canSend ? '' : '等待对方连接或者建立链接失败..'"  :disabled="!canSend" @keydown.enter="sendMsg"/>
                             <div class="w-full block w-auto ml-2">
                                 <Button  icon="pi pi-send" iconPos="left" :disabled="!canSend" @click="sendMsg"/>
                             </div>
