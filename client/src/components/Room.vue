@@ -1,7 +1,9 @@
 <template>
     <div class="layout-content-wrapper" @dragover.prevent="handleDragOver"
          @dragleave="handleDragLeave"
-         @drop.prevent="handleDrop">
+         @drop.prevent="handleDrop"
+         @paste="handlePaste"
+    >
         <div class="layout-content">
             <div class="p-card p-component p-0 flex">
                 <div class="flex flex-column relative" style="height: calc(100vh - 62px - 4em);">
@@ -42,21 +44,27 @@
                         <div v-for="(msg,index) in messages" :key="index">
                             <MessageText v-if="msg.data.type==='message'" :msg="msg"></MessageText>
                             <MessageFile v-else-if="msg.data?.type==='file'" :msg="msg"></MessageFile>
+                            <MessageImg v-else-if="msg.data?.type==='img'" :msg="msg"></MessageImg>
                         </div>
                     </div>
                     <div class="pt-2 pl-3 pr-3 pb-3 md:pl-4 md:pr-4  md:pb-4 flex flex-column mt-auto border-top-1 surface-border gap-3" >
                         <div v-if="canSend" class="flex align-items-center tools">
                             <span  class="pi pi-file text-400 hover:text-primary-300 cursor-pointer text-xl" v-tooltip="'发送文件'"  @click="chooseFile" />
                             <input type="file" ref="file" @change="sendFile" class="aman-file">
+                            <span  class="ml-4 pi pi-image text-400 hover:text-primary-300 cursor-pointer text-xl" v-tooltip="'发送图片'"  @click="chooseImage" />
+                            <input type="file" ref="imgfile" @change="sendImg" class="aman-file" accept="image/*">
+                            <span class="ml-4 pi pi-microphone text-400 hover:text-primary-300 cursor-pointer text-xl"  v-tooltip="'语音通话'"  @click="voiceSwitch" aria-disabled="true"></span>
                             <span class="ml-4 pi pi-desktop text-400 hover:text-primary-300 cursor-pointer text-xl"  v-tooltip="'分享屏幕'"  @click="shareScreen" aria-disabled="true"></span>
                         </div>
                         <div v-else class="flex align-items-center tools">
                             <span  class="pi pi-file text-300  text-xl"  />
                             <input type="file" ref="file" @change="sendFile" class="aman-file">
+                            <span  class="ml-4 pi pi-image text-300  text-xl"  />
+                            <span class="ml-4 pi pi-microphone text-300 text-xl"></span>
                             <span class="ml-4 pi pi-desktop text-300 text-xl"></span>
                         </div>
                         <div class="flex align-items-center w-full">
-                            <InputText class="w-full flex-1 " v-model="message" placeholder="Search"  :disabled="!canSend" @keydown.enter="sendMsg"/>
+                            <Textarea class="w-full flex-1 " v-model="message" :placeholder="canSend ? '' : '等待对方连接或者建立链接失败..'"  :disabled="!canSend" autofocus @keydown.enter.prevent="sendMsg" @keydown.enter.ctrl.exact.prevent="ctrlEnter"/>
                             <div class="w-full block w-auto ml-2">
                                 <Button  icon="pi pi-send" iconPos="left" :disabled="!canSend" @click="sendMsg"/>
                             </div>
@@ -74,9 +82,10 @@
 import Clipboard from 'clipboard';
 import Toast from 'primevue/toast'
 import {useToast} from "primevue/usetoast";
-import InputText from "primevue/inputtext";
+import Textarea from "primevue/textarea";
 import MessageText from "@/components/MessageText.vue";
 import MessageFile from "@/components/MessageFile.vue";
+import MessageImg from "@/components/MessageImg.vue";
 let toast;
 export default {
     // eslint-disable-next-line vue/multi-word-component-names
@@ -84,8 +93,9 @@ export default {
     components: {
         MessageFile,
         MessageText,
+        MessageImg,
         Toast,
-        InputText,
+        Textarea,
     },
     props: {
         roomId: String,
@@ -124,8 +134,39 @@ export default {
                     this.$emit('chooseFile', file)
                 }
             }
-
-
+        },
+        fileToDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        },
+        handlePaste(event) {
+            // event.preventDefault();
+            const items = (event.clipboardData || event.originalEvent.clipboardData)
+                .items;
+            // let pasteFiles = [];
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file') {
+                    const file = item.getAsFile();
+                    // 判断file是不是图片
+                    if (file.type.startsWith('image/') && file.size >= 0) {
+                        let that = this;
+                        this.fileToDataURL(file).then(dataUrl => {
+                            const data = {
+                                message: dataUrl,
+                                type: "img",
+                            };
+                            that.$emit('sendMsg', data);
+                        });
+                    }
+                }
+            }
+            // this.handleFiles(pasteFiles);
+            // console.log(pasteFiles);
         },
 
         showCall(e) {
@@ -135,6 +176,9 @@ export default {
         chooseFile() {
             this.$refs.file.click()
         },
+        chooseImage() {
+            this.$refs.imgfile.click()
+        },
         sendFile(e) {
             const file = e.target.files[0];
             if (file.size === 0) {
@@ -142,9 +186,29 @@ export default {
             }
             this.$emit('chooseFile', file)
         },
+        sendImg(e) {
+            const file = e.target.files[0];
+            if (file.size === 0 || !file.type.startsWith('image/')) {
+                toast.add({
+                    severity: 'danger',
+                    summary: '提示',
+                    detail: '图片不合法。',
+                    life: 3000
+                });
+                return;
+            }
+            let that = this;
+            this.fileToDataURL(file).then(dataUrl => {
+                const data = {
+                    message: dataUrl,
+                    type: "img",
+                };
+                that.$emit('sendMsg', data);
+            });
+        },
 
-        sendMsg() {
-            if (!this.message) {
+        sendMsg(e) {
+            if (!this.message || e.ctrlKey) {
                 return
             }
             const data = {
@@ -153,6 +217,17 @@ export default {
             };
             this.message = ""
             this.$emit("sendMsg", data)
+        },
+        ctrlEnter(e) {
+            // ctrl+回车换行
+            if(!e.ctrlKey) { return }
+            const textarea = e.target; //注意此处获取dom
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const value = textarea.value;
+            const newValue = value.substring(0, start) + "\n" + value.substring(end);
+            textarea.value = newValue;
+            textarea.selectionStart = textarea.selectionEnd = start + 1;
         },
         copyText(e, text) {
 

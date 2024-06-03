@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div >
         <div v-if="msg.from==='other'" class="grid grid-nogutter mb-4">
             <div class="mr-3 mt-1">
                 <div class="p-avatar p-component p-avatar-circle p-avatar-lg shadow-3">
@@ -21,23 +21,36 @@
                 </div>
             </div>
             <div class="col mt-1">
-                <span class="text-700 inline-block font-medium border-1 surface-border p-3  border-round" style="word-break: break-word; max-width: 80%;">
-                    <pre class="m-0">{{ msg.data.message }}</pre>
-                </span>
-                <p class="text-700  text-sm mt-1">{{ formatTime(msg.time) }} <i
-                    class="pi pi-check ml-2 text-green-400"></i></p>
+
+                <div
+                    class="cursor-pointer  text-blue-500 text-700 inline-block font-medium border-1 surface-border p-3  border-round"
+                    style="word-break: break-word; max-width: 80%;">
+                    <div class="inline-block mr-3">
+                        <span class="mb-2 inline-block cursor-pointer ">
+                            <Image alt="Image" :src="msg.data.message" width="250" preview></Image>
+                        </span>
+                    </div>
+                </div>
+                <p class="text-700  text-sm mt-1">{{ formatTime(msg.time) }}
+                    <i class="pi pi-check ml-2 text-green-400"></i>
+                </p>
             </div>
         </div>
         <div v-else>
-            <div class="grid grid-nogutter mb-4">
-                <div class="col mt-1 text-right">
+            <div class="mb-4">
+                <div class="mt-1 text-right">
                     <div
-                        class="inline-block text-left font-medium border-1 surface-border bg-primary-100 text-primary-900 p-3  border-round"
+                        class=" text-blue-500 inline-block text-left  bg-primary-100 p-3 font-medium border-round"
                         style="word-break: break-word; max-width: 80%;">
-                        <pre class="m-0">{{ msg.data.message }}</pre>
+                        <div class="inline-block mr-3">
+                            <span class="mb-2 inline-block cursor-pointer ">
+                                <Image alt="Image" :src="msg.data.message" width="250" preview></Image>
+                            </span>
+                        </div>
                     </div>
-                    <p class="text-700 text-sm mt-1">{{ formatTime(msg.time) }} <i
-                        class="pi pi-check ml-2 text-green-400"></i></p>
+                    <p class="text-700 text-sm mt-1">{{ formatTime(msg.time) }}
+                        <i  class="pi pi-check ml-2 text-green-400"></i>
+                    </p>
                 </div>
             </div>
         </div>
@@ -45,13 +58,19 @@
 </template>
 
 <script>
+import Image from 'primevue/image';
+
 export default {
-    name: "MessageText",
+    name: "MessageFile",
     data() {
-        return {};
+        return {
+        };
     },
-    props: {
-        msg: Object
+    components:{
+        Image
+    },
+    props:{
+        msg:Object
     },
     created() {
     },
