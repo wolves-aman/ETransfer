@@ -3,15 +3,19 @@
     <div class="body" :class="{isResize:isResize}">
         <Loading v-if="!wsConnection" :hint="hint"></Loading>
         <CreateRoom v-if="wsConnection && !isCreatedRoom" @createRoom="createRoom"></CreateRoom>
-        <Room v-if="wsConnection && isCreatedRoom" :room-id="roomId" :is-connected="isConnected"
+        <Room v-if="wsConnection && isCreatedRoom" ref="chatRoom" :room-id="roomId" :is-connected="isConnected"
               :can-send="canSend" :messages="messages"
               @sendMsg="sendPcMsg"
               @share-screen="createScreenShare"
-              @choose-file="startSendFile"></Room>
+              @choose-file="startSendFile">
+        </Room>
         <div v-show="showScreenShare" ref="screen" id="screen" draggable="true"
              @dragstart.self="dragStartScreen"
-             @drag.self="dragEndScreen">
-            <video ref="screenVideo" autoplay poster="data:image/png;base64,"></video>
+             @dragend.self="dragEndScreen"
+             :style="{ left: screenLeft+'px', top: screenTop+'px' }"
+        >
+             <!-- 此处必须是muted+autoplay 否则播放会黑屏 -->
+            <video ref="screenVideo" autoplay muted poster="data:image/png;base64,"></video>
             <div class="point top" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
             <div class="point left" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
             <div class="point right" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
@@ -22,6 +26,8 @@
             <div class="point bottom-right" @mousedown="startResizeScreen" @touchstart="startResizeScreen"></div>
 
             <div class="tools text-right">
+                <i class="pi pi-bell mr-4" v-if="isScreenShareMuted" @click="muteSwitchScreenShare"></i>
+                <i class="pi pi-bell-slash mr-4" v-if="!isScreenShareMuted" @click="muteSwitchScreenShare"></i>
                 <i class="pi pi-window-minimize mr-4" @click="exitFullScreen"></i>
                 <i class="pi pi-window-maximize" @click="fullScreen"></i>
 
@@ -73,6 +79,7 @@ export default {
             screenStartLeft: 0,
             screenStartTop: 0,
             showScreenShare: false,
+            isScreenShareMuted: true,
             webSocketHeartInterval: null,
             isResize: false,
             clientX: 0,
@@ -80,8 +87,10 @@ export default {
             // div可修改的最小宽高
             minW: 100,
             minH: 100,
-            direc: ""
-
+            direc: "",
+            // 共享屏幕窗口的动态位置
+            screenLeft: 100,
+            screenTop: 260,
         }
     },
     setup() {
@@ -380,6 +389,7 @@ export default {
                             from: "other",
                             time: new Date().getTime()
                         })
+                        this.$refs.chatRoom.scrollToBottom()
                     }
                 }
             } else {
@@ -392,13 +402,23 @@ export default {
 
             }
         },
-        onStream(e) {
+        onStream(e) { //目前仅支持屏幕共享，以后加上其他通讯的时候需要改这里
             if (!this.$refs.screen) {
                 return
             }
             this.showScreenShare = true
+            this.$refs.screenVideo.load();
             this.$refs.screenVideo.srcObject = e.streams[0];
-            this.$refs.screenVideo.play();
+            
+            setTimeout(() => {
+                try{
+                    this.$refs.screenVideo.play()
+                } catch (error) {
+                    console.error("屏幕共享播放失败",error)
+                }
+            },200)
+            
+            this.isScreenShareMuted = true;
             return false
         },
         onSendTextChannelStateChange() {
@@ -560,6 +580,13 @@ export default {
                 life: 3000
             })
         },
+        muteSwitchScreenShare() {
+            if (this.showScreenShare) {
+                console.log("Switch Mute", this.isScreenShareMuted)
+                this.isScreenShareMuted = !this.isScreenShareMuted;
+                this.$refs.screenVideo.muted = this.isScreenShareMuted;
+            }
+        },
         dragStartScreen(e) {
             this.screenStartX = e.clientX
             this.screenStartY = e.clientY
@@ -568,7 +595,10 @@ export default {
 
         },
         dragEndScreen(e) {
-            const dx = e.clientX - this.screenStartX;
+            if(e.screenX ==0 && e.screenY==0){
+                return
+            }
+            const dx = e.clientX - this.screenStartX; //
             const dy = e.clientY - this.screenStartY;
             let newLeft = this.screenStartLeft + dx;
             let newTop = this.screenStartTop + dy;
@@ -582,10 +612,8 @@ export default {
             } else if (newLeft > (window.innerWidth - this.$refs.screen.offsetWidth)) {
                 newLeft = window.innerWidth - this.$refs.screen.offsetWidth
             }
-            this.$refs.screen.style.left = newLeft + 'px';
-            this.$refs.screen.style.top = newTop + 'px';
-
-
+            this.screenLeft = newLeft;
+            this.screenTop = newTop;
         },
         touchStartScreen(e) {
             this.screenStartX = e.targetTouches[0].clientX
@@ -700,8 +728,6 @@ header {
 
 #screen {
     position: fixed;
-    left: 100px;
-    top: 260px;
     width: 33vw;
     height: 25vw;
     background: #000;
