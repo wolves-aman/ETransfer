@@ -4,3 +4,5 @@ server/node_modules/
 client/pnpm-lock.yaml
 server/pnpm-lock.yaml
 server/ssl.pfx
+server/data/
+client/dist/
