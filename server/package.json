@@ -1,14 +1,19 @@
 {
   "name": "server",
   "version": "1.0.0",
+  "private": true,
+  "description": "ETransfer WebRTC 信令服务",
   "type": "module",
+  "engines": {
+    "node": ">=18.17"
+  },
   "scripts": {
-    "dev": "node server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
   },
   "dependencies": {
+    "nanoid": "^5.0.6",
     "ws": "^8.16.0"
-  },
-  "devDependencies": {
-    "nanoid": "^5.0.6"
   }
 }
