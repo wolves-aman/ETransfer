@@ -20,12 +20,6 @@
 
 <img src="./docs/screenshots/room.png" alt="ETransfer 房间" width="100%">
 
-### 邀请与日志
-
-<p align="center">
-  <img src="./docs/screenshots/invite.png" alt="二维码邀请" width="49%">
-  <img src="./docs/screenshots/logs.png" alt="房间日志" width="49%">
-</p>
 
 ## 功能
 
