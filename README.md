@@ -167,7 +167,7 @@ HTTPS 是麦克风、摄像头、屏幕共享和 Service Worker 的前提；本�
 ```
 client/                Vue 3 前端（自研 UI）
 server/                信令 / 房间 / 预览 / 中继
-design-preview/        已确认的静态视觉稿
+docs/screenshots/      README 界面截图
 ```
 
 ## 测试
