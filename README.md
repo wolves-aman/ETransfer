@@ -10,6 +10,23 @@
 - 后端：Node.js + `ws`，提供信令、房间管理、链接预览与可选中继
 - 部署：纯静态前端 + 一个 Node 服务，支持 PWA / Share Target
 
+## 界面预览
+
+### 首页
+
+<img src="./docs/screenshots/landing.png" alt="ETransfer 首页" width="100%">
+
+### 房间
+
+<img src="./docs/screenshots/room.png" alt="ETransfer 房间" width="100%">
+
+### 邀请与日志
+
+<p align="center">
+  <img src="./docs/screenshots/invite.png" alt="二维码邀请" width="49%">
+  <img src="./docs/screenshots/logs.png" alt="房间日志" width="49%">
+</p>
+
 ## 功能
 
 | 模块 | 能力 |

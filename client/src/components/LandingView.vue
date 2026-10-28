@@ -51,7 +51,6 @@
                 <div class="orbit o2"><i></i></div>
                 <div class="orbit o3"></div>
                 <span class="float-tag t1">DTLS 1.2</span>
-                <span class="float-tag t2">0 KB SERVER STORAGE</span>
                 <span class="float-tag t3">WEBRTC / SCTP</span>
 
                 <form class="create-card" @submit.prevent="submit">
