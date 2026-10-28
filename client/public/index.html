@@ -1,25 +1,56 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="theme-color" content="#020705">
+    <meta name="description" content="ETransfer：基于 WebRTC 的点对点文件、聊天与屏幕共享工具。文件不经过服务器。">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="icon" href="<%= BASE_URL %>favicon.ico">
-    <title><%= htmlWebpackPlugin.options.title %></title>
+    <link rel="apple-touch-icon" href="<%= BASE_URL %>icons/icon-180.png">
+    <link rel="manifest" href="<%= BASE_URL %>manifest.webmanifest">
+    <title>ETransfer · 点对点传输</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #020705; }
+      #app { height: 100%; }
+      .boot {
+        height: 100%;
+        display: grid;
+        place-items: center;
+        color: #54ffa8;
+        font-family: "Cascadia Code", Consolas, monospace;
+        font-size: 10px;
+        letter-spacing: .3em;
+      }
+    </style>
   </head>
   <body>
     <noscript>
-      <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+      <strong>ETransfer 需要启用 JavaScript 才能运行。</strong>
     </noscript>
-    <div id="app"></div>
+    <div id="app">
+      <div class="boot">ETRANSFER / BOOTING…</div>
+    </div>
+    <script>
+      // 开发环境：Vue CLI 跑在 8080，信令与 API 在 9090。
+      // 生产环境：默认同域 wss://host/ws 与 /api，可按部署方式覆盖 window.WSURL / window.API_URL。
+      (function () {
+        var dev = location.port === '8080'
+        var secure = location.protocol === 'https:'
+        if (window.WSURL === undefined) {
+          window.WSURL = dev
+            ? (secure ? 'wss://' : 'ws://') + location.hostname + ':9090'
+            : (secure ? 'wss://' : 'ws://') + location.host + '/ws'
+        }
+        if (window.API_URL === undefined) {
+          window.API_URL = dev
+            ? location.protocol + '//' + location.hostname + ':9090'
+            : ''
+        }
+      })()
+    </script>
     <!-- built files will be auto injected -->
-  <script>
-      window.WSURL="ws://127.0.0.1:9090";
-      window.WEBRTC_CONFIG={
-          iceServers: [
-              {urls: "stun:stun.l.google.com:19302"},
-          ]
-      };
-  </script>
   </body>
 </html>
