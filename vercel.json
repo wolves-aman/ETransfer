@@ -7,11 +7,22 @@
     }
   },
   "functions": {
-    "api/events.js": {
+    "api/sse.js": {
       "maxDuration": 300
-    },
-    "api/signal.js": {
-      "maxDuration": 60
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/events",
+      "destination": "/api/sse?route=events"
+    },
+    {
+      "source": "/api/signal",
+      "destination": "/api/sse?route=signal"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/sse?route=health"
+    }
+  ]
 }

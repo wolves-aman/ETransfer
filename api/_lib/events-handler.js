@@ -3,8 +3,7 @@ import {
     disconnectClient,
     getClientSession,
     pollEvents
-} from './_lib/signal-service.js'
-import { backend } from './_lib/store.js'
+} from './signal-service.js'
 
 const MAX_STREAM_MS = 280_000
 const POLL_MS = 250
@@ -39,15 +38,6 @@ export default async function handler(req, res) {
     if (req.method !== 'GET') {
         res.writeHead(405, { 'Content-Type': 'application/json; charset=UTF-8' })
         res.end(JSON.stringify({ error: 'Method Not Allowed', code: 'METHOD_NOT_ALLOWED' }))
-        return
-    }
-
-    if (process.env.VERCEL && backend === 'memory') {
-        res.writeHead(503, { 'Content-Type': 'application/json; charset=UTF-8' })
-        res.end(JSON.stringify({
-            error: 'Vercel 部署需要 Upstash Redis 环境变量',
-            code: 'REDIS_REQUIRED'
-        }))
         return
     }
 

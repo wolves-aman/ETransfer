@@ -8,7 +8,7 @@
 
 - 前端：Vue 3 + Vite 时代之前的 Vue CLI 5，**已移除 PrimeVue / PrimeFlex / PrimeIcons**，使用自研绿色霓虹设计系统
 - 后端：Node.js + `ws`，同时提供 WebSocket 与 POST+SSE 信令，负责房间、链接预览与可选中继
-- 部署：纯静态前端 + Node 服务；或 Vercel 单项目 Functions + Upstash Redis，支持 PWA / Share Target
+- 部署：纯静态前端 + Node 服务；或 Vercel 单项目 Functions（客户端 + 内存 SSE），支持 PWA / Share Target
 
 ## 界面预览
 
@@ -66,7 +66,7 @@ http://localhost:8080/?transport=sse
 
 SSE 连接建立后服务端通过首帧下发 `client_id` 和 `token`，之后所有创建/加入/TRANSFER 消息都 POST 到 `/api/signal`。
 
-注意：当前房间状态仍在单个 Node 进程内。SSE 适合 HTTP-only 代理或单实例 Serverless；多实例部署仍需要 Redis 共享房间状态和广播。SSE 断开后不会自动恢复房间，需要重新加入。
+注意：当前房间状态仍在单个 Node 进程内。SSE 适合 HTTP-only 代理或单实例 Serverless；多实例部署需要外部共享存储（如 Postgres）和跨实例广播。
 
 ## 快速开始
 
@@ -158,26 +158,25 @@ server {
 
 HTTPS 是麦克风、摄像头、屏幕共享和 Service Worker 的前提；本地 `localhost` 除外。
 
-## Vercel 单项目部署（客户端 + SSE）
+## Vercel 单项目部署（客户端 + 内存 SSE）
 
-仓库里已经包含一个 Vercel 项目配置，可同时部署静态前端和 `/api/events` / `/api/signal`：
+仓库里已经包含一个 Vercel 项目配置，可同时部署静态前端和 SSE：
 
 - `vercel.json`：构建 `client`，构建时设置 `VUE_APP_SIGNAL_TRANSPORT=sse`
-- `api/events.js`：SSE 下行
-- `api/signal.js`：POST 上行
-- `api/_lib/store.js`：Upstash Redis / 本地内存适配
+- `api/sse.js`：**同一个 Function** 同时处理 `GET /api/events`、`POST /api/signal`、`GET /api/health`
+- `api/_lib/store.js`：进程内 Map，**不使用 Redis**
+- `/api/events`、`/api/signal` 通过 `vercel.json` 的 rewrites 进入 `/api/sse`
 
 ### 步骤
 
 1. Vercel 导入仓库，**Root Directory 保持仓库根目录**（不要选 `client`）
-2. 在 Vercel Marketplace 创建 Upstash Redis，并添加环境变量：
-   ```bash
-   UPSTASH_REDIS_REST_URL=...
-   UPSTASH_REDIS_REST_TOKEN=...
-   ```
-   也兼容 Vercel KV 的 `KV_REST_API_URL` / `KV_REST_API_TOKEN`
-3. 部署后打开 `https://your-app.vercel.app`
-4. 访问 `/api/health` 确认 `store` 为 `redis`；如果是 `memory`，说明 Redis 环境变量没生效
+2. 直接 Deploy，不需要任何数据库或环境变量
+3. 打开 `https://your-app.vercel.app`
+4. 访问 `/api/health`，正常返回：
+
+```json
+{ "status": "ok", "sse": true, "store": "memory" }
+```
 
 `.vercel.app` 域名会自动使用 SSE；绑定自定义域名时，在 Vercel 环境变量里加：
 
@@ -193,10 +192,10 @@ window.SIGNAL_TRANSPORT = 'sse'
 
 ### 必须知道
 
-- **必须配置 Upstash Redis**。Vercel 环境未配置时接口会返回 `503 REDIS_REQUIRED`；只有本地 `npm start`（未设置 `VERCEL`）才会退回进程内 Map。多实例下没有 Redis 会出现“创建成功但另一台机器找不到房间”。
-- `api/events` 的 `maxDuration` 当前为 300 秒，客户端会带 `client_id` / `token` 自动重连并保留房间；Hobby 计划上限更低时也能续连。
+- 这是**纯内存单实例模式**：房间只存在当前 Function 实例里，Vercel 扩容到多实例或实例被回收后，房间会找不到、已加入的成员会丢失。
+- 适合演示、低流量、固定几个人使用；不适合多实例生产。
+- `api/sse.js` 的 `maxDuration` 当前为 300 秒，客户端会带 `client_id` / `token` 自动重连；如果重连落到新实例，内存里没有旧会话，需要重新创建/加入房间。
 - Vercel API 目前只移植了信令。`/api/link-preview` 和 `/api/relay` 仍需要独立 Node 服务或接 R2/S3；P2P 文件传输本身不受影响。
-- SSE 采用 250ms 轮询 Upstash，房间人数和通话时长会直接影响 Redis 命令量。
 
 ## PWA
 

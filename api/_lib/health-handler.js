@@ -1,4 +1,4 @@
-import { backend } from './_lib/store.js'
+import { backend } from './store.js'
 
 export default function handler(req, res) {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=UTF-8' })
