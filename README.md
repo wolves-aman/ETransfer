@@ -161,3 +161,14 @@ go test ./...
 go build -trimpath -ldflags="-s -w" -o etransfer .
 cd frontend && npm run lint && npm run build
 ```
+
+## Vercel Services（尝试）
+
+`vercel.json` 使用 Vercel Services 把 Go 服务作为单个 `app` service：
+
+- `runtime: go`
+- 构建时先执行 `frontend` 的 `npm ci && npm run build`
+- 再 `go build`，前端通过 `go:embed` 进入二进制
+- 所有路径 rewrite 到 `app`
+
+这依赖 Vercel 账号支持 **Services + Go runtime**。如果控制台提示 runtime 不支持，Vercel 就不能运行这个常驻 GoFiber 服务，改用 Railway / Fly.io / VPS 或容器部署。

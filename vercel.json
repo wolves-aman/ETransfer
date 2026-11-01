@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "runtime": "go",
+      "entrypoint": "main.go",
+      "buildCommand": "npm --prefix frontend ci && npm --prefix frontend run build && go build -trimpath -ldflags=\"-s -w\" -o etransfer ."
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "app"
+      }
+    }
+  ]
+}
