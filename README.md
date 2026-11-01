@@ -2,8 +2,8 @@
 
 基于 WebRTC 的浏览器点对点传输工具。文件、图片、聊天与屏幕画面在参与者之间加密直连，服务器只负责房间与信令，不保存文件内容。
 
-- 前端：Vue 3 + Vue CLI，纯静态，构建到 `client/dist`
-- 后端：Go + Fiber，直接托管 `client/dist`，只提供 WS/SSE 信令
+- 前端：Vue 3 + Vue CLI，纯静态，构建到 `frontend/dist`
+- 后端：Go + Fiber，直接托管 `frontend/dist`，只提供 WS/SSE 信令
 - 传输：文件、聊天、音视频全部走 WebRTC DataChannel / MediaStream
 
 ## 界面预览
@@ -47,7 +47,7 @@
 Go 服务同时托管：
 
 ```text
-/                 client/dist 静态文件
+/                 frontend/dist 静态文件
 /ws               WebSocket 信令（SIGNAL_TRANSPORT=both|ws）
 /api/events       SSE 下行（SIGNAL_TRANSPORT=both|sse）
 /api/signal       SSE 上行
@@ -59,19 +59,23 @@ Go 服务同时托管：
 要求 Node.js >= 18.17、Go >= 1.26。
 
 ```bash
-# 1. 构建前端
-cd client
-npm install
-npm run build
+# 1. 构建前端并生成 embed 资源
+go generate ./...
 
-# 2. 启动 Go 服务（自动查找 client/dist）
-cd ../server
-go run .
+# 2. 编译单二进制
+go build -trimpath -ldflags="-s -w" -o etransfer .
+
+# 3. 启动
+./etransfer
 ```
 
 打开 `http://localhost:9090`。
 
-Go 会优先使用 `STATIC_DIR`，默认 `client/dist`；在 `server` 目录运行时自动回退到 `../client/dist`。
+开发模式（读取外部 `frontend/dist`，不嵌入）：
+
+```bash
+go run -tags dev .
+```
 
 ## 信令传输
 
@@ -106,7 +110,7 @@ SSE 首帧返回 `client_id` + `token`，后续上行消息 POST 到 `/api/signa
 | 环境变量 | 默认值 | 说明 |
 |---|---|---|
 | `HOST` / `PORT` | `0.0.0.0` / `9090` | 监听地址 |
-| `STATIC_DIR` | `client/dist` | 前端构建目录 |
+| `STATIC_DIR` | `frontend/dist` | 前端构建目录 |
 | `SIGNAL_TRANSPORT` | `both` | `both` / `ws` / `sse` |
 | `ALLOWED_ORIGINS` | 空 | CORS 白名单，逗号分隔 |
 | `MAX_USERS` | `8` | 单房间人数上限 |
@@ -117,8 +121,8 @@ SSE 首帧返回 `client_id` + `token`，后续上行消息 POST 到 `/api/signa
 
 ## PWA
 
-- `client/public/manifest.webmanifest` 声明安装信息与 Share Target
-- `client/public/sw.js` 缓存应用壳，并处理 `POST /share-target`
+- `frontend/public/manifest.webmanifest` 声明安装信息与 Share Target
+- `frontend/public/sw.js` 缓存应用壳，并处理 `POST /share-target`
 - 仅生产构建注册 Service Worker
 
 ## 大文件接收
@@ -143,14 +147,17 @@ SSE 首帧返回 `client_id` + `token`，后续上行消息 POST 到 `/api/signa
 ## 目录
 
 ```text
-client/                Vue 3 前端
-server/                Go + Fiber 信令服务
-docs/screenshots/      README 截图
+frontend/                Vue 3 前端源码
+internal/                Go 业务包（config/protocol/room/signaling/web/app）
+main.go                  单二进制入口
+assets_*.go              内嵌 / 开发模式静态资源
+docs/screenshots/        README 截图
 ```
 
 ## 测试
 
 ```bash
-cd server && go test ./...
-cd client && npm run lint && npm run build
+go test ./...
+go build -trimpath -ldflags="-s -w" -o etransfer .
+cd frontend && npm run lint && npm run build
 ```

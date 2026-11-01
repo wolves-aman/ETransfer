@@ -1,9 +1,8 @@
 .idea/
 node_modules/
-client/node_modules/
-client/dist/
-server/data/
-server/*.exe
-server/etransfer-server
+frontend/node_modules/
+frontend/dist/
+etransfer
+etransfer*.exe
 .env
 .env.local
