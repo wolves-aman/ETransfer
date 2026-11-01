@@ -25,6 +25,25 @@ export class SseSignalingClient {
         this.heartbeat = null
         this.closedByUser = false
         this.connectPromise = null
+        this.reconnectTimer = null
+        this.handlePageHide = () => {
+            if (!this.clientId || !this.token || typeof navigator.sendBeacon !== 'function') {
+                return
+            }
+            try {
+                navigator.sendBeacon(
+                    this.signalUrl,
+                    JSON.stringify({
+                        client_id: this.clientId,
+                        token: this.token,
+                        action: 'LEAVE_ROOM'
+                    })
+                )
+            } catch {
+                // 页面卸载阶段失败可忽略，服务端会按连接关闭清理
+            }
+        }
+        window.addEventListener('pagehide', this.handlePageHide)
     }
 
     isOpen() {
@@ -43,12 +62,23 @@ export class SseSignalingClient {
         }
 
         this.closedByUser = false
+        this.clearReconnect()
+        window.addEventListener('pagehide', this.handlePageHide)
         this.onStatus?.('connecting')
         log.info('signal', '连接 SSE 信令', { url: this.eventsUrl })
 
+        const params = new URLSearchParams()
+        if (this.clientId && this.token) {
+            params.set('client_id', this.clientId)
+            params.set('token', this.token)
+        }
+        const eventsUrl = params.toString()
+            ? `${this.eventsUrl}?${params.toString()}`
+            : this.eventsUrl
+
         this.connectPromise = new Promise((resolve, reject) => {
             let settled = false
-            const source = new EventSource(this.eventsUrl)
+            const source = new EventSource(eventsUrl)
             this.source = source
 
             const timer = setTimeout(() => {
@@ -71,6 +101,7 @@ export class SseSignalingClient {
                 if (message.action === 'CONNECTED') {
                     clearTimeout(timer)
                     settled = true
+                    this.clearReconnect()
                     this.clientId = message.client_id
                     this.token = message.token
                     this.connected = true
@@ -92,7 +123,11 @@ export class SseSignalingClient {
                 if (!settled) {
                     settled = true
                     source.close()
+                    this.source = null
                     reject(new Error('无法连接 SSE 信令'))
+                    if (this.clientId && this.token && !this.closedByUser) {
+                        this.scheduleReconnect()
+                    }
                     return
                 }
                 if (!this.closedByUser) {
@@ -144,8 +179,6 @@ export class SseSignalingClient {
     handleDisconnect() {
         this.stopHeartbeat()
         this.connected = false
-        this.clientId = ''
-        this.token = ''
         if (this.source) {
             this.source.close()
             this.source = null
@@ -159,8 +192,33 @@ export class SseSignalingClient {
         this.onEvent?.({
             action: 'SIGNAL_CLOSED',
             code: 1006,
-            reason: 'sse_disconnected'
+            reason: 'sse_disconnected',
+            reconnecting: Boolean(this.clientId && this.token)
         })
+        if (this.clientId && this.token) {
+            this.scheduleReconnect()
+        }
+    }
+
+    clearReconnect() {
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer)
+            this.reconnectTimer = null
+        }
+    }
+
+    scheduleReconnect() {
+        if (this.closedByUser || this.reconnectTimer) {
+            return
+        }
+        this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null
+            if (this.closedByUser) return
+            this.connect().catch((error) => {
+                log.warn('signal', 'SSE 重连失败', { error: error.message })
+                this.scheduleReconnect()
+            })
+        }, 1_200)
     }
 
     /**
@@ -252,6 +310,8 @@ export class SseSignalingClient {
 
     close() {
         this.closedByUser = true
+        window.removeEventListener('pagehide', this.handlePageHide)
+        this.clearReconnect()
         this.stopHeartbeat()
         this.onStatus?.('idle')
         this.connected = false

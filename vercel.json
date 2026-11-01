@@ -1,0 +1,17 @@
+{
+  "buildCommand": "npm --prefix client install && npm --prefix client run build",
+  "outputDirectory": "client/dist",
+  "build": {
+    "env": {
+      "VUE_APP_SIGNAL_TRANSPORT": "sse"
+    }
+  },
+  "functions": {
+    "api/events.js": {
+      "maxDuration": 300
+    },
+    "api/signal.js": {
+      "maxDuration": 60
+    }
+  }
+}

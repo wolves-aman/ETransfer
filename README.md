@@ -8,7 +8,7 @@
 
 - 前端：Vue 3 + Vite 时代之前的 Vue CLI 5，**已移除 PrimeVue / PrimeFlex / PrimeIcons**，使用自研绿色霓虹设计系统
 - 后端：Node.js + `ws`，同时提供 WebSocket 与 POST+SSE 信令，负责房间、链接预览与可选中继
-- 部署：纯静态前端 + 一个 Node 服务，支持 PWA / Share Target
+- 部署：纯静态前端 + Node 服务；或 Vercel 单项目 Functions + Upstash Redis，支持 PWA / Share Target
 
 ## 界面预览
 
@@ -158,6 +158,46 @@ server {
 
 HTTPS 是麦克风、摄像头、屏幕共享和 Service Worker 的前提；本地 `localhost` 除外。
 
+## Vercel 单项目部署（客户端 + SSE）
+
+仓库里已经包含一个 Vercel 项目配置，可同时部署静态前端和 `/api/events` / `/api/signal`：
+
+- `vercel.json`：构建 `client`，构建时设置 `VUE_APP_SIGNAL_TRANSPORT=sse`
+- `api/events.js`：SSE 下行
+- `api/signal.js`：POST 上行
+- `api/_lib/store.js`：Upstash Redis / 本地内存适配
+
+### 步骤
+
+1. Vercel 导入仓库，**Root Directory 保持仓库根目录**（不要选 `client`）
+2. 在 Vercel Marketplace 创建 Upstash Redis，并添加环境变量：
+   ```bash
+   UPSTASH_REDIS_REST_URL=...
+   UPSTASH_REDIS_REST_TOKEN=...
+   ```
+   也兼容 Vercel KV 的 `KV_REST_API_URL` / `KV_REST_API_TOKEN`
+3. 部署后打开 `https://your-app.vercel.app`
+4. 访问 `/api/health` 确认 `store` 为 `redis`；如果是 `memory`，说明 Redis 环境变量没生效
+
+`.vercel.app` 域名会自动使用 SSE；绑定自定义域名时，在 Vercel 环境变量里加：
+
+```bash
+VUE_APP_SIGNAL_TRANSPORT=sse
+```
+
+或运行时设置：
+
+```js
+window.SIGNAL_TRANSPORT = 'sse'
+```
+
+### 必须知道
+
+- **必须配置 Upstash Redis**。Vercel 环境未配置时接口会返回 `503 REDIS_REQUIRED`；只有本地 `npm start`（未设置 `VERCEL`）才会退回进程内 Map。多实例下没有 Redis 会出现“创建成功但另一台机器找不到房间”。
+- `api/events` 的 `maxDuration` 当前为 300 秒，客户端会带 `client_id` / `token` 自动重连并保留房间；Hobby 计划上限更低时也能续连。
+- Vercel API 目前只移植了信令。`/api/link-preview` 和 `/api/relay` 仍需要独立 Node 服务或接 R2/S3；P2P 文件传输本身不受影响。
+- SSE 采用 250ms 轮询 Upstash，房间人数和通话时长会直接影响 Redis 命令量。
+
 ## PWA
 
 - `client/public/manifest.webmanifest` 声明安装信息与 Share Target。
@@ -191,7 +231,9 @@ HTTPS 是麦克风、摄像头、屏幕共享和 Service Worker 的前提；本�
 
 ```
 client/                Vue 3 前端（自研 UI）
-server/                信令 / 房间 / 预览 / 中继
+server/                常驻 Node 信令 / 房间 / 预览 / 中继
+api/                   Vercel Functions：SSE + POST 信令
+vercel.json            Vercel 单项目构建配置
 docs/screenshots/      README 界面截图
 ```
 

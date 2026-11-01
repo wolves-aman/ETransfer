@@ -14,8 +14,12 @@ const apiBase = window.API_URL !== undefined
         : ''
 
 const transportFromQuery = new URLSearchParams(window.location.search).get('transport')
+const isVercelHost = /\.vercel\.app$/i.test(window.location.hostname)
 const signalTransport = String(
-    window.SIGNAL_TRANSPORT || transportFromQuery || 'ws'
+    window.SIGNAL_TRANSPORT
+    || transportFromQuery
+    || process.env.VUE_APP_SIGNAL_TRANSPORT
+    || (isVercelHost ? 'sse' : 'ws')
 ).toLowerCase()
 
 export const runtime = {

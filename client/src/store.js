@@ -232,7 +232,7 @@ function handleSignalingEvent(message) {
             resetRoom()
             break
         case 'SIGNAL_CLOSED':
-            if (state.room) {
+            if (state.room && !message.reconnecting) {
                 toast.error('信令连接断开', '房间通道已不可用，请重新加入')
             }
             break

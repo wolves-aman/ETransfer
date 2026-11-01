@@ -144,6 +144,65 @@ export class Room {
         return [...this.users.values()]
     }
 
+    /**
+     * 序列化为可存入 Redis 的普通对象。
+     * 注意：client 引用不会序列化，只保存 clientId。
+     */
+    toJSON() {
+        return {
+            id: this.id,
+            maxUsers: this.maxUsers,
+            oneTime: this.oneTime,
+            expiresAt: this.expiresAt,
+            createdAt: this.createdAt,
+            passwordSalt: this.passwordSalt,
+            passwordHash: this.passwordHash ? this.passwordHash.toString('hex') : '',
+            hostId: this.hostId,
+            users: [...this.users.entries()].map(([client, user]) => ({
+                id: user.id,
+                name: user.name,
+                isHost: user.isHost,
+                joinedAt: user.joinedAt,
+                clientId: client.clientId
+            }))
+        }
+    }
+
+    /**
+     * 从 Redis 恢复房间；clientFactory 负责根据 clientId 生成轻量客户端。
+     *
+     * @param {ReturnType<Room['toJSON']>} data
+     * @param {(clientId: string) => object} clientFactory
+     */
+    static fromJSON(data, clientFactory) {
+        const room = Object.create(Room.prototype)
+        room.id = data.id
+        room.maxUsers = data.maxUsers
+        room.oneTime = data.oneTime
+        room.expiresAt = data.expiresAt
+        room.createdAt = data.createdAt
+        room.passwordSalt = data.passwordSalt
+        room.passwordHash = data.passwordHash
+            ? Buffer.from(data.passwordHash, 'hex')
+            : null
+        room.hostId = data.hostId
+        room.users = new Map()
+
+        for (const item of data.users || []) {
+            const client = clientFactory(item.clientId)
+            const user = Object.create(User.prototype)
+            Object.assign(user, {
+                id: item.id,
+                name: item.name,
+                isHost: item.isHost,
+                joinedAt: item.joinedAt,
+                client
+            })
+            room.users.set(client, user)
+        }
+        return room
+    }
+
     getUserById(id) {
         for (const user of this.users.values()) {
             if (user.id === id) {
