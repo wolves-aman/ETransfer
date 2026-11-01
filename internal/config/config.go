@@ -21,6 +21,7 @@ type Config struct {
 	MaxPayload      int
 	Heartbeat       time.Duration
 	Sweep           time.Duration
+	LogLevel        string
 }
 
 func Load() Config {
@@ -37,6 +38,7 @@ func Load() Config {
 		MaxPayload:      envInt("MAX_PAYLOAD", 65536),
 		Heartbeat:       time.Duration(envInt("HEARTBEAT_INTERVAL", 30000)) * time.Millisecond,
 		Sweep:           time.Duration(envInt("SWEEP_INTERVAL", 30000)) * time.Millisecond,
+		LogLevel:        strings.ToLower(env("LOG_LEVEL", "info")),
 	}
 	if cfg.Transport != "ws" && cfg.Transport != "sse" {
 		cfg.Transport = "both"

@@ -17,6 +17,8 @@ type Client struct {
 	ID        string
 	Token     string
 	Transport string
+	IP        string
+	RequestID string
 
 	mu      sync.Mutex
 	ws      *websocket.Conn

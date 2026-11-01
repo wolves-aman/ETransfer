@@ -3,7 +3,8 @@ package signaling
 import (
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 
 	"etransfer/internal/protocol"
@@ -73,6 +74,12 @@ func (s *Server) createRoom(client *Client, session *Session, message map[string
 		"one_time": created.OneTime, "max_users": created.MaxUsers,
 		"expires_at": created.ExpiresAt, "created_at": created.CreatedAt,
 	})
+	s.logger.Info("room_created",
+		zap.String("room_id", created.ID),
+		zap.String("user_id", user.ID),
+		zap.Bool("one_time", created.OneTime),
+		zap.Int("max_users", created.MaxUsers),
+	)
 	return nil
 }
 
@@ -133,6 +140,11 @@ func (s *Server) joinRoom(client *Client, session *Session, message map[string]a
 			other.SendJSON(fiber.Map{"action": "PEER_JOINED", "peer": room.PublicUser(user)})
 		}
 	}
+	s.logger.Info("room_joined",
+		zap.String("room_id", current.ID),
+		zap.String("user_id", user.ID),
+		zap.Int("users", len(current.Users)),
+	)
 	return nil
 }
 
@@ -157,6 +169,11 @@ func (s *Server) leaveLocked(client *Client, session *Session, reason string) {
 	session.Room = nil
 	session.User = nil
 	client.Close()
+	s.logger.Info("room_left",
+		zap.String("room_id", current.ID),
+		zap.String("user_id", user.ID),
+		zap.String("reason", reason),
+	)
 }
 
 func (s *Server) kick(client *Client, session *Session, message map[string]any) error {
@@ -198,6 +215,11 @@ func (s *Server) kick(client *Client, session *Session, message map[string]any) 
 	} else {
 		s.broadcastLocked(current, fiber.Map{"action": "PEER_LEFT", "peer_id": targetID, "reason": "kicked"}, nil)
 	}
+	s.logger.Info("peer_kicked",
+		zap.String("room_id", current.ID),
+		zap.String("peer_id", targetID),
+		zap.String("by", session.User.ID),
+	)
 	return nil
 }
 
@@ -228,6 +250,11 @@ func (s *Server) closeRoomLocked(current *room.Room, reason string) {
 			session.User = nil
 		}
 	}
+	s.logger.Info("room_closed",
+		zap.String("room_id", current.ID),
+		zap.String("reason", reason),
+		zap.Int("users", len(current.Users)),
+	)
 }
 
 func (s *Server) transfer(client *Client, session *Session, message map[string]any) error {

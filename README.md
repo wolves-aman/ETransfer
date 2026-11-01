@@ -118,6 +118,22 @@ SSE 首帧返回 `client_id` + `token`，后续上行消息 POST 到 `/api/signa
 | `DEFAULT_EXPIRY_MINUTES` | `180` | 默认有效期 |
 | `MAX_EXPIRY_MINUTES` | `1440` | 最长有效期 |
 | `MAX_PAYLOAD` | `65536` | 单条消息最大字节数 |
+| `LOG_LEVEL` | `info` | `debug` / `info` / `warn` / `error` / `fatal` |
+
+## 日志
+
+服务端使用 zap，JSON 输出到 stdout：
+
+```json
+{"level":"info","ts":"2026-11-01T12:00:00.000+0800","caller":"signaling/server.go:59","msg":"connection_open","transport":"ws","client_id":"...","request_id":"...","ip":"127.0.0.1"}
+```
+
+- `LOG_LEVEL=debug` 可输出调试日志；默认 `info`
+- 记录 HTTP 请求、WS/SSE 连接、房间创建/加入/离开/踢人/关闭、错误
+- 跳过 `/health` 和静态资源访问日志
+- 支持 `X-Request-ID`，没有则自动生成
+- 不记录密码、SDP、ICE candidate、SSE token
+- 运行中的 `fatal` 只写日志不退出；启动失败记录 `fatal` 后退出 1
 
 ## PWA
 
