@@ -7,9 +7,9 @@
             <aside v-if="open" class="drawer">
                 <div class="drawer-head">
                     <AppIcon name="terminal" />
-                    <strong>房间日志</strong>
+                    <strong>{{ t('房间日志') }}</strong>
                     <span class="mono-label">ROOM ONLY</span>
-                    <button class="drawer-close" type="button" aria-label="关闭" @click="$emit('close')">
+                    <button class="drawer-close" type="button" :aria-label="t('关闭')" @click="$emit('close')">
                         <AppIcon name="x" />
                     </button>
                 </div>
@@ -25,12 +25,12 @@
                             @click="filter = level.value"
                         >{{ level.label }}</button>
                         <span class="spacer"></span>
-                        <button type="button" @click="exportLogs">导出</button>
-                        <button type="button" @click="clear">清空</button>
+                        <button type="button" @click="exportLogs">{{ t('导出') }}</button>
+                        <button type="button" @click="clear">{{ t('清空') }}</button>
                     </div>
 
                     <div v-if="!filtered.length" class="logs-empty">
-                        暂无日志。连接、信令、传输和媒体事件都会出现在这里。
+                        {{ t('暂无日志。连接、信令、传输和媒体事件都会出现在这里。') }}
                     </div>
 
                     <div v-else class="log-list">
@@ -48,7 +48,7 @@
 
                 <div class="drawer-foot">
                     <p class="panel-note" style="margin: 0">
-                        日志仅保存在当前页面内存中，关闭页面即清空。它只会在房间界面出现。
+                        {{ t('日志仅保存在当前页面内存中，关闭页面即清空。它只会在房间界面出现。') }}
                     </p>
                 </div>
             </aside>
@@ -60,6 +60,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import AppIcon from './AppIcon.vue'
 import { logState, log } from '../lib/logger'
+import { t } from '../lib/i18n'
 
 const props = defineProps({
     open: { type: Boolean, default: false }

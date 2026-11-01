@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { t } from './i18n'
 
 export const feedback = reactive({
     toasts: [],
@@ -60,11 +61,11 @@ export const toast = {
  * @returns {Promise<boolean>}
  */
 export function confirmDialog({
-    title = '确认操作',
+    title = t('确认操作'),
     message = '',
     tone = 'warn',
-    confirmText = '确定',
-    cancelText = '取消'
+    confirmText = t('确定'),
+    cancelText = t('取消')
 } = {}) {
     if (feedback.dialog) {
         feedback.dialog.resolve(false)

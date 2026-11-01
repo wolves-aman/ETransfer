@@ -8,11 +8,11 @@
     <div v-else class="msg" :class="{ me: mine }">
         <div v-if="!mine" class="av">{{ initials(message.fromName) }}</div>
         <div class="msg-body">
-            <div v-if="!mine" class="msg-name">{{ message.fromName || '成员' }}</div>
+            <div v-if="!mine" class="msg-name">{{ message.fromName || t('成员') }}</div>
 
             <template v-if="message.revoked">
                 <div class="bubble">
-                    <span class="revoked-text">消息已撤回</span>
+                    <span class="revoked-text">{{ t('消息已撤回') }}</span>
                 </div>
             </template>
 
@@ -20,8 +20,8 @@
                 <div class="bubble text-bubble">
                     <p class="text-content">{{ message.text }}</p>
                     <div v-if="mine" class="msg-actions">
-                        <button type="button" title="复制" @click="copy"><AppIcon name="copy" /></button>
-                        <button type="button" title="撤回" @click="$emit('recall', message.id)"><AppIcon name="trash" /></button>
+                        <button type="button" :title="t('复制')" @click="copy"><AppIcon name="copy" /></button>
+                        <button type="button" :title="t('撤回')" @click="$emit('recall', message.id)"><AppIcon name="trash" /></button>
                     </div>
                 </div>
             </template>
@@ -30,11 +30,11 @@
                 <div class="bubble image-bubble">
                     <button type="button" @click="$emit('open-image', message)">
                         <div class="shot">
-                            <img :src="message.image" alt="图片消息" loading="lazy">
+                            <img :src="message.image" :alt="t('图片')" loading="lazy">
                         </div>
                     </button>
                     <div v-if="mine" class="msg-actions">
-                        <button type="button" title="撤回" @click="$emit('recall', message.id)"><AppIcon name="trash" /></button>
+                        <button type="button" :title="t('撤回')" @click="$emit('recall', message.id)"><AppIcon name="trash" /></button>
                     </div>
                 </div>
             </template>
@@ -55,16 +55,16 @@
                             <div class="file-status">
                                 <span>{{ formatBytes(message.file.received) }} / {{ formatBytes(message.file.size) }}</span>
                                 <span v-if="message.file.error" class="canceled">{{ message.file.error }}</span>
-                                <span v-else-if="message.file.complete && canDownload">已接收</span>
-                                <span v-else-if="message.file.complete">已完成</span>
-                                <span v-else>接收中</span>
+                                <span v-else-if="message.file.complete && canDownload">{{ t('已接收') }}</span>
+                                <span v-else-if="message.file.complete">{{ t('已完成') }}</span>
+                                <span v-else>{{ t('接收中') }}</span>
                             </div>
                         </div>
                         <button
                             class="file-dl"
                             type="button"
-                            :aria-label="canDownload ? '保存文件' : '文件尚未接收完成'"
-                            :title="canDownload ? '保存到本地' : '文件尚未接收完成'"
+                            :aria-label="canDownload ? t('保存文件') : t('文件尚未接收完成')"
+                            :title="canDownload ? t('保存到本地') : t('文件尚未接收完成')"
                             :disabled="!canDownload"
                             @click="download"
                         >
@@ -89,6 +89,7 @@ import { formatBytes, formatTime, initials, percent } from '../lib/format'
 import { saveReceivedFile } from '../lib/download'
 import { copyText } from '../lib/clipboard'
 import { toast } from '../lib/feedback'
+import { t } from '../lib/i18n'
 import { state } from '../store'
 
 const props = defineProps({
@@ -113,7 +114,7 @@ const filePercent = computed(() => {
 const statusText = computed(() => {
     const file = props.message.file
     if (!file) return ''
-    if (file.canceled) return '已取消'
+    if (file.canceled) return t('已取消')
     if (file.complete) return '100%'
     return `${filePercent.value}%`
 })
@@ -125,20 +126,20 @@ const canDownload = computed(() => Boolean(
 async function download() {
     const file = props.message.file
     if (!file || !canDownload.value) {
-        toast.warn('文件尚未接收完成', '等传输结束后再保存')
+        toast.warn(t('文件尚未接收完成'), t('等待传输结束后再保存'))
         return
     }
     try {
         await saveReceivedFile(file)
-        toast.success('文件已保存', file.name)
+        toast.success(t('文件已保存'), file.name)
     } catch (error) {
         if (error.name === 'AbortError') return
-        toast.error('保存失败', error.message)
+        toast.error(t('保存失败'), error.message)
     }
 }
 
 async function copy() {
     const ok = await copyText(props.message.text || '')
-    if (ok) toast.success('已复制')
+    if (ok) toast.success(t('已复制'))
 }
 </script>

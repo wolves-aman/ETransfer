@@ -9,19 +9,19 @@
             <header class="screen-head" @pointerdown="startDrag">
                 <div class="screen-head-left">
                     <i class="dot"></i>
-                    <strong>{{ source.local ? '你正在共享屏幕' : `${source.name} 正在共享屏幕` }}</strong>
+                    <strong>{{ source.local ? t('你正在共享屏幕') : t('{name} 正在共享屏幕', { name: source.name }) }}</strong>
                     <span class="mono-label">{{ source.local ? 'LOCAL PREVIEW' : 'REMOTE SCREEN' }}</span>
                 </div>
                 <div class="screen-actions" @pointerdown.stop>
-                    <button type="button" :title="maximized ? '还原' : '最大化'" @click="toggleMax">
+                    <button type="button" :title="maximized ? t('还原') : t('最大化')" @click="toggleMax">
                         <AppIcon :name="maximized ? 'shrink' : 'expand'" />
                     </button>
-                    <button type="button" :title="immersive ? '退出沉浸' : '沉浸全屏'" @click="toggleImmersive">
+                    <button type="button" :title="immersive ? t('退出沉浸') : t('沉浸全屏')" @click="toggleImmersive">
                         <AppIcon name="monitor" />
                     </button>
                     <button
                         type="button"
-                        :title="source.local ? '停止共享' : '隐藏画面'"
+                        :title="source.local ? t('停止共享') : t('隐藏画面')"
                         @click="closeStage"
                     >
                         <AppIcon :name="source.local ? 'x' : 'eye'" />
@@ -39,14 +39,14 @@
                 ></video>
                 <div v-else class="screen-wait">
                     <span class="loader-ring"></span>
-                    正在建立共享画面…
+                    {{ t('正在建立共享画面…') }}
                 </div>
             </div>
 
             <span
                 v-if="!maximized && !immersive"
                 class="screen-resize"
-                title="拖动调整大小"
+                :title="t('拖动调整大小')"
                 @pointerdown.stop.prevent="startResize"
             ></span>
         </div>
@@ -55,12 +55,12 @@
             v-else-if="hiddenSource"
             class="screen-mini"
             type="button"
-            :title="`${hiddenSource.name} 正在共享屏幕，点击展开`"
+            :title="t('{name} 正在共享屏幕，点击展开', { name: hiddenSource.name })"
             @click="restoreStage"
         >
             <i class="dot"></i>
-            <span><strong>{{ hiddenSource.name }}</strong> 正在共享屏幕</span>
-            <em>展开</em>
+            <span><strong>{{ hiddenSource.name }}</strong> {{ t('正在共享屏幕') }}</span>
+            <em>{{ t('展开') }}</em>
             <AppIcon name="monitor" />
         </button>
     </Teleport>
@@ -69,6 +69,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import AppIcon from './AppIcon.vue'
+import { t } from '../lib/i18n'
 import { state, actions } from '../store'
 
 const video = ref(null)

@@ -13,6 +13,7 @@ import { idbTakeShares } from './lib/idb'
 import { compressImage, wrapFile } from './lib/files'
 import { cleanupIncoming } from './lib/opfs'
 import { groupCode, formatBytes } from './lib/format'
+import { t } from './lib/i18n'
 
 const NAME_KEY = 'etransfer-name'
 
@@ -195,7 +196,7 @@ function handleSignalingEvent(message) {
             })
             mesh.connectTo(peer)
             addSystem(`${peer.name} 加入了通道`)
-            toast.info('成员加入', `${peer.name} 已进入通道`)
+            toast.info(t('成员加入'), t('{name} 已进入通道', { name: peer.name }))
             log.info('room', '成员加入', { peer: peer.name })
             break
         }
@@ -204,14 +205,14 @@ function handleSignalingEvent(message) {
             mesh.closePeer(message.peer_id)
             removePeer(message.peer_id)
             addSystem(`${name} 离开了通道`)
-            toast.warn('成员离开', `${name} 已断开连接`)
+            toast.warn(t('成员离开'), t('{name} 已断开连接', { name }))
             log.warn('room', '成员离开', { peer: name, reason: message.reason })
             break
         }
         case 'HOST_CHANGED': {
             if (message.peer_id === state.self.id) {
                 state.self.isHost = true
-                toast.info('房主已转移', '你现在是房主')
+                toast.info(t('房主已转移'), t('你现在是房主'))
             }
             for (const peer of state.peers) {
                 peer.isHost = peer.id === message.peer_id
@@ -223,20 +224,20 @@ function handleSignalingEvent(message) {
             mesh.handleSignal(message.from, message)
             break
         case 'KICKED':
-            toast.error('已被移出房间', message.msg || '房主结束了你的会话')
+            toast.error(t('已被移出房间'), message.msg || t('房主结束了你的会话'))
             resetRoom()
             break
         case 'ROOM_CLOSED':
-            toast.warn('房间已关闭', message.msg || '通道已结束')
+            toast.warn(t('房间已关闭'), message.msg || t('通道已结束'))
             resetRoom()
             break
         case 'SIGNAL_CLOSED':
             if (state.room && !message.reconnecting) {
-                toast.error('信令连接断开', '房间通道已不可用，请重新加入')
+                toast.error(t('信令连接断开'), t('房间通道已不可用，请重新加入'))
             }
             break
         case 'ERROR':
-            toast.error('操作失败', message.msg || '服务器返回错误')
+            toast.error(t('操作失败'), message.msg || t('服务器返回错误'))
             break
         case 'LEAVE_ROOM':
         case 'HEART_BEAT':
@@ -337,7 +338,7 @@ function createOutgoingMessage(message) {
         ts: message.ts
     })
     if (!delivered) {
-        toast.warn('暂无接收者', '当前没有已连接成员，消息仅保存在本地')
+        toast.warn(t('暂无接收者'), t('当前没有已连接成员，消息仅保存在本地'))
     }
     return delivered
 }
@@ -478,7 +479,7 @@ export const actions = {
             },
             onIncomingComplete: (message) => {
                 saveMessage(message).catch(() => {})
-                toast.success('文件接收完成', `${message.file.name} · ${formatBytes(message.file.size)}`)
+                toast.success(t('文件接收完成'), `${message.file.name} · ${formatBytes(message.file.size)}`)
             },
             onIncomingRejected: (peerId, meta, reason) => {
                 toast.warn(
@@ -489,7 +490,7 @@ export const actions = {
                 )
             },
             onIncomingError: (message, error) => {
-                toast.error('文件接收失败', `${message.file.name}：${error.message}`)
+                toast.error(t('文件接收失败'), `${message.file.name}：${error.message}`)
             },
             onItemUpdate: (item) => {
                 if (!item?.messageId) return
@@ -527,7 +528,7 @@ export const actions = {
         try {
             await signaling.connect()
         } catch (error) {
-            toast.error('无法连接服务', error.message)
+            toast.error(t('无法连接服务'), error.message)
         }
     },
 
@@ -549,9 +550,9 @@ export const actions = {
                 max_users: maxUsers
             })
             await this.enterRoom(response, { password })
-            toast.success('通道已创建', `短码 ${groupCode(response.room_id)}`)
+            toast.success(t('通道已创建'), t('短码 {code}', { code: groupCode(response.room_id) }))
         } catch (error) {
-            toast.error('创建房间失败', error.message)
+            toast.error(t('创建房间失败'), error.message)
             throw error
         } finally {
             state.roomLoading = false
@@ -569,9 +570,9 @@ export const actions = {
                 name: state.name || '访客'
             })
             await this.enterRoom(response)
-            toast.success('已进入通道', `短码 ${groupCode(response.room_id)}`)
+            toast.success(t('已进入通道'), t('短码 {code}', { code: groupCode(response.room_id) }))
         } catch (error) {
-            toast.error('加入房间失败', error.message)
+            toast.error(t('加入房间失败'), error.message)
             throw error
         } finally {
             state.roomLoading = false
@@ -633,7 +634,7 @@ export const actions = {
     leaveRoom() {
         signaling.leaveRoom()
         resetRoom()
-        toast.info('已离开通道', '本地历史消息已保留')
+        toast.info(t('已离开通道'), t('本地历史消息已保留'))
     },
 
     async closeRoom() {
@@ -739,7 +740,7 @@ export const actions = {
         message.image = ''
         updateMessage(message).catch(() => {})
         mesh.broadcast({ kind: 'recall', id: messageId })
-        toast.success('消息已撤回')
+        toast.success(t('消息已撤回'))
     },
 
     async shareScreen() {

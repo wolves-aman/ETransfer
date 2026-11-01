@@ -11,7 +11,7 @@
             <VideoTile
                 v-if="state.media.cameraStream && state.media.camOn"
                 :stream="state.media.cameraStream"
-                label="你 · 摄像头"
+                :label="t('你 · 摄像头')"
                 local
                 muted
                 fallback="ET"
@@ -21,7 +21,7 @@
             <button
                 type="button"
                 :class="{ on: state.media.micOn }"
-                :title="state.media.micOn ? '关闭麦克风' : '开启麦克风'"
+                :title="state.media.micOn ? t('关闭麦克风') : t('开启麦克风')"
                 @click="actions.toggleMic()"
             >
                 <AppIcon :name="state.media.micOn ? 'mic' : 'mic-off'" />
@@ -29,7 +29,7 @@
             <button
                 type="button"
                 :class="{ on: state.media.camOn }"
-                :title="state.media.camOn ? '关闭摄像头' : '开启摄像头'"
+                :title="state.media.camOn ? t('关闭摄像头') : t('开启摄像头')"
                 @click="actions.toggleCam()"
             >
                 <AppIcon :name="state.media.camOn ? 'camera' : 'camera-off'" />
@@ -37,12 +37,12 @@
             <button
                 type="button"
                 :class="{ on: state.media.sharing }"
-                title="屏幕共享"
+                :title="t('屏幕共享')"
                 @click="state.media.sharing ? actions.stopScreenShare() : actions.shareScreen()"
             >
                 <AppIcon name="monitor" />
             </button>
-            <button class="danger" type="button" title="结束通话" @click="actions.hangupMedia()">
+            <button class="danger" type="button" :title="t('结束通话')" @click="actions.hangupMedia()">
                 <AppIcon name="phone-off" />
             </button>
         </div>
@@ -54,6 +54,7 @@ import { computed } from 'vue'
 import AppIcon from './AppIcon.vue'
 import VideoTile from './VideoTile.vue'
 import { initials } from '../lib/format'
+import { t } from '../lib/i18n'
 import { state, actions } from '../store'
 
 const streamPeers = computed(() => state.peers.filter((peer) => {

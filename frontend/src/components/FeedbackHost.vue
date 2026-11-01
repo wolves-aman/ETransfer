@@ -15,7 +15,7 @@
                         <strong>{{ item.title }}</strong>
                         <small v-if="item.message">{{ item.message }}</small>
                     </div>
-                    <button class="toast-close" aria-label="关闭提示" @click="dismissToast(item.id)">
+                    <button class="toast-close" aria-label="Close notification" @click="dismissToast(item.id)">
                         <AppIcon name="x" />
                     </button>
                     <span

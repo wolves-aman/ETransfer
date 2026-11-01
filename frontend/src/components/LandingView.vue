@@ -12,37 +12,38 @@
                 <span class="brand-beta">BETA</span>
             </a>
             <nav class="topnav">
-                <a href="#features">端到端加密</a>
-                <a href="#features">无需安装</a>
+                <a href="#features">{{ t('端到端加密') }}</a>
+                <a href="#features">{{ t('无需安装') }}</a>
                 <a href="https://github.com/wolves-aman/ETransfer" target="_blank" rel="noreferrer">
                     GITHUB <AppIcon name="external" />
                 </a>
             </nav>
+            <LangSwitch />
             <div class="net-pill" :class="state.connection">
                 <i class="dot"></i>
                 {{ connectionLabel }}
-                <button v-if="state.connection === 'offline'" @click="actions.retryConnection()">重试</button>
+                <button v-if="state.connection === 'offline'" @click="actions.retryConnection()">{{ t('重试') }}</button>
             </div>
         </header>
 
         <main class="landing-main">
             <div class="hero">
                 <div class="eyebrow"><span class="eyebrow-line"></span> PEER-TO-PEER / NO CLOUD / NO TRACE</div>
-                <h1>文件不落地，<br><span class="grad-text">直达</span>对方屏幕<span class="cursor"></span></h1>
-                <p class="lede">基于 WebRTC 的点对点传输。文件、图片、语音与屏幕画面在两端之间加密直连，服务器只负责牵线，不保存任何内容。</p>
+                <h1>{{ t('文件不落地，') }}<br><span class="grad-text">{{ t('直达') }}</span>{{ t('对方屏幕') }}<span class="cursor"></span></h1>
+                <p class="lede">{{ t('基于 WebRTC 的点对点传输。文件、图片、语音与屏幕画面在两端之间加密直连，服务器只负责牵线，不保存任何内容。') }}</p>
 
                 <div class="hero-facts">
-                    <div class="fact"><strong>0<small>KB</small></strong><span>云端留存</span></div>
-                    <div class="fact"><strong>8<small>PEERS</small></strong><span>Mesh 房间</span></div>
-                    <div class="fact"><strong>∞<small>SIZE</small></strong><span>文件大小</span></div>
+                    <div class="fact"><strong>0<small>KB</small></strong><span>{{ t('云端留存') }}</span></div>
+                    <div class="fact"><strong>8<small>PEERS</small></strong><span>{{ t('Mesh 房间') }}</span></div>
+                    <div class="fact"><strong>∞<small>SIZE</small></strong><span>{{ t('文件大小') }}</span></div>
                 </div>
 
                 <div class="chips" id="features">
-                    <span class="chip"><AppIcon name="zap" /> WebRTC 直连</span>
-                    <span class="chip"><AppIcon name="lock" /> DTLS 加密</span>
-                    <span class="chip"><AppIcon name="users" /> 多人 Mesh</span>
-                    <span class="chip"><AppIcon name="shield" /> 房间密码</span>
-                    <span class="chip"><AppIcon name="clock" /> 有效期 / 一次性</span>
+                    <span class="chip"><AppIcon name="zap" /> {{ t('WebRTC 直连') }}</span>
+                    <span class="chip"><AppIcon name="lock" /> {{ t('DTLS 加密') }}</span>
+                    <span class="chip"><AppIcon name="users" /> {{ t('多人 Mesh') }}</span>
+                    <span class="chip"><AppIcon name="shield" /> {{ t('房间密码') }}</span>
+                    <span class="chip"><AppIcon name="clock" /> {{ t('有效期 / 一次性') }}</span>
                 </div>
             </div>
 
@@ -61,30 +62,30 @@
                     </div>
 
                     <div class="mode-switch">
-                        <button type="button" :class="{ on: mode === 'create' }" @click="switchMode('create')">创建通道</button>
-                        <button type="button" :class="{ on: mode === 'join' }" @click="switchMode('join')">加入通道</button>
+                        <button type="button" :class="{ on: mode === 'create' }" @click="switchMode('create')">{{ t('创建通道') }}</button>
+                        <button type="button" :class="{ on: mode === 'join' }" @click="switchMode('join')">{{ t('加入通道') }}</button>
                     </div>
 
-                    <h2>{{ mode === 'create' ? '建立传输通道' : '进入传输通道' }}</h2>
+                    <h2>{{ mode === 'create' ? t('建立传输通道') : t('进入传输通道') }}</h2>
                     <p class="card-sub">
                         {{ mode === 'create'
-                            ? '生成一条一次性邀请链接，对方打开即可进入同一通道。'
-                            : '输入对方发来的短码，如果房间设置了密码请一并填写。' }}
+                            ? t('生成一条一次性邀请链接，对方打开即可进入同一通道。')
+                            : t('输入对方发来的短码，如果房间设置了密码请一并填写。') }}
                     </p>
 
                     <div class="form-stack" style="margin-top: 18px">
                         <div>
-                            <label class="compact-label" for="name">你的昵称 <span>最多 24 字</span></label>
+                            <label class="compact-label" for="name">{{ t('你的昵称') }} <span>{{ t('最多 24 字') }}</span></label>
                             <div class="input-shell small">
                                 <AppIcon name="user" />
-                                <input id="name" v-model="form.name" maxlength="24" placeholder="例如 Aman" autocomplete="nickname">
+                                <input id="name" v-model="form.name" maxlength="24" :placeholder="t('例如 Aman')" autocomplete="nickname">
                             </div>
                         </div>
 
                         <div>
                             <label class="compact-label" for="code">
-                                房间短码
-                                <span>{{ mode === 'create' ? '留空自动生成' : '必填' }}</span>
+                                {{ t('房间短码') }}
+                                <span>{{ mode === 'create' ? t('留空自动生成') : t('必填') }}</span>
                             </label>
                             <div class="input-shell small">
                                 <AppIcon name="hash" />
@@ -92,17 +93,17 @@
                                     id="code"
                                     :value="form.code"
                                     maxlength="12"
-                                    placeholder="例如 A7F3K2"
+                                    :placeholder="t('例如 A7F3K2')"
                                     autocomplete="off"
                                     spellcheck="false"
                                     @input="onCodeInput"
                                 >
-                                <button v-if="mode === 'create'" class="ghost-chip" type="button" @click="randomCode">随机</button>
+                                <button v-if="mode === 'create'" class="ghost-chip" type="button" @click="randomCode">{{ t('随机') }}</button>
                             </div>
                         </div>
 
                         <div v-if="mode === 'join'">
-                            <label class="compact-label" for="join-password">房间密码 <span>没有则留空</span></label>
+                            <label class="compact-label" for="join-password">{{ t('房间密码') }} <span>{{ t('没有则留空') }}</span></label>
                             <div class="input-shell small">
                                 <AppIcon name="key" />
                                 <input
@@ -110,7 +111,7 @@
                                     v-model="form.password"
                                     type="password"
                                     maxlength="64"
-                                    placeholder="房间密码"
+                                    :placeholder="t('房间密码')"
                                     autocomplete="current-password"
                                 >
                             </div>
@@ -118,15 +119,15 @@
 
                         <template v-if="mode === 'create'">
                             <button class="advanced-toggle" type="button" @click="advanced = !advanced">
-                                <span>高级选项 · 密码 / 有效期 / 人数</span>
+                                <span>{{ t('高级选项 · 密码 / 有效期 / 人数') }}</span>
                                 <AppIcon :name="advanced ? 'shrink' : 'expand'" />
                             </button>
 
                             <div v-if="advanced" class="advanced-panel">
                                 <div class="switch-row">
                                     <div>
-                                        <strong>设置房间密码</strong>
-                                        <small>加入时需要输入密码</small>
+                                        <strong>{{ t('设置房间密码') }}</strong>
+                                        <small>{{ t('加入时需要输入密码') }}</small>
                                     </div>
                                     <button
                                         class="switch"
@@ -144,7 +145,7 @@
                                             v-model="form.password"
                                             type="password"
                                             maxlength="64"
-                                            placeholder="至少 4 位字符"
+                                            :placeholder="t('至少 4 位字符')"
                                             autocomplete="new-password"
                                         >
                                     </div>
@@ -152,34 +153,19 @@
 
                                 <div class="form-row">
                                     <div>
-                                        <label class="compact-label">有效期</label>
-                                        <div class="select-shell">
-                                            <select v-model.number="form.expiresIn">
-                                                <option :value="0">永久</option>
-                                                <option :value="30">30 分钟</option>
-                                                <option :value="180">3 小时</option>
-                                                <option :value="480">8 小时</option>
-                                                <option :value="1440">24 小时</option>
-                                            </select>
-                                        </div>
+                                        <label class="compact-label">{{ t('有效期') }}</label>
+                                        <SelectMenu v-model="form.expiresIn" :options="expiryOptions" :label="t('有效期')" />
                                     </div>
                                     <div>
-                                        <label class="compact-label">人数上限</label>
-                                        <div class="select-shell">
-                                            <select v-model.number="form.maxUsers" :disabled="form.oneTime">
-                                                <option :value="2">2 人</option>
-                                                <option :value="4">4 人</option>
-                                                <option :value="6">6 人</option>
-                                                <option :value="8">8 人</option>
-                                            </select>
-                                        </div>
+                                        <label class="compact-label">{{ t('人数上限') }}</label>
+                                        <SelectMenu v-model="form.maxUsers" :options="maxUserOptions" :label="t('人数上限')" :disabled="form.oneTime" />
                                     </div>
                                 </div>
 
                                 <div class="switch-row">
                                     <div>
-                                        <strong>一次性房间</strong>
-                                        <small>成员离开即销毁，不可重复使用</small>
+                                        <strong>{{ t('一次性房间') }}</strong>
+                                        <small>{{ t('成员离开即销毁，不可重复使用') }}</small>
                                     </div>
                                     <button
                                         class="switch"
@@ -197,14 +183,14 @@
 
                     <button class="btn primary" type="submit" :disabled="busy">
                         <AppIcon v-if="busy" name="refresh" class="spin" />
-                        {{ busy ? '正在建立通道…' : (mode === 'create' ? '创建房间' : '加入房间') }}
+                        {{ busy ? t('正在建立通道…') : (mode === 'create' ? t('创建房间') : t('加入房间')) }}
                         <AppIcon v-if="!busy" name="arrow" />
                     </button>
 
                     <div class="join-line">
-                        {{ mode === 'create' ? '已有房间号？' : '还没有房间？' }}
+                        {{ mode === 'create' ? t('已有房间号？') : t('还没有房间？') }}
                         <a href="#" @click.prevent="switchMode(mode === 'create' ? 'join' : 'create')">
-                            {{ mode === 'create' ? '直接加入' : '创建一个' }}
+                            {{ mode === 'create' ? t('直接加入') : t('创建一个') }}
                         </a>
                     </div>
 
@@ -224,10 +210,13 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import AppIcon from './AppIcon.vue'
 import BrandMark from './BrandMark.vue'
+import LangSwitch from './LangSwitch.vue'
+import SelectMenu from './SelectMenu.vue'
 import { state, actions } from '../store'
+import { t } from '../lib/i18n'
 
 const mode = ref(state.initialCode ? 'join' : 'create')
 const advanced = ref(false)
@@ -245,10 +234,27 @@ const form = reactive({
 })
 
 const connectionLabel = computed(() => {
-    if (state.connection === 'online') return '信令节点在线'
-    if (state.connection === 'connecting') return '正在连接信令…'
-    if (state.connection === 'idle') return '信令按需连接'
-    return '信令节点离线'
+    if (state.connection === 'online') return t('信令节点在线')
+    if (state.connection === 'connecting') return t('正在连接')
+    if (state.connection === 'idle') return t('信令按需连接')
+    return t('信令节点离线')
+})
+
+const expiryOptions = computed(() => [
+    { value: 0, label: t('永久') },
+    { value: 30, label: t('30 分钟') },
+    { value: 180, label: t('3 小时') },
+    { value: 480, label: t('8 小时') },
+    { value: 1440, label: t('24 小时') }
+])
+
+const maxUserOptions = computed(() => [2, 4, 6, 8].map((value) => ({
+    value,
+    label: t('{n} 人', { n: value })
+})))
+
+watch(() => form.oneTime, (value) => {
+    if (value) form.maxUsers = 2
 })
 
 function switchMode(next) {
@@ -281,15 +287,15 @@ async function submit() {
     const code = form.code.replace(/[^A-Za-z0-9_-]/g, '').toUpperCase()
 
     if (mode.value === 'join' && code.length < 4) {
-        error.value = '请输入至少 4 位房间短码。'
+        error.value = t('请输入至少 4 位房间短码。')
         return
     }
     if (mode.value === 'create' && code && (code.length < 4 || code.length > 12)) {
-        error.value = '房间短码需要 4~12 位。'
+        error.value = t('房间短码需要 4~12 位。')
         return
     }
     if (form.usePassword && mode.value === 'create' && form.password.length < 4) {
-        error.value = '房间密码至少 4 位字符。'
+        error.value = t('房间密码至少 4 位字符。')
         return
     }
 
@@ -312,7 +318,7 @@ async function submit() {
             })
         }
     } catch (err) {
-        error.value = err.message || '操作失败，请稍后重试。'
+        error.value = err.message || t('操作失败，请稍后重试。')
     } finally {
         busy.value = false
     }

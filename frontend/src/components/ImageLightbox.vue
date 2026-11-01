@@ -2,15 +2,15 @@
     <Teleport to="body">
         <Transition name="modal" appear>
             <div v-if="current" class="lightbox" @click.self="$emit('close')">
-                <img :src="current.src" :alt="`图片 ${index + 1}`">
-                <button class="lightbox-close" type="button" aria-label="关闭" @click="$emit('close')">
+                <img :src="current.src" :alt="t('图片 {n}', { n: index + 1 })">
+                <button class="lightbox-close" type="button" :aria-label="t('关闭')" @click="$emit('close')">
                     <AppIcon name="x" />
                 </button>
                 <button
                     v-if="images.length > 1"
                     class="lightbox-prev"
                     type="button"
-                    aria-label="上一张"
+                    :aria-label="t('上一张')"
                     @click="$emit('update:index', (index - 1 + images.length) % images.length)"
                 >
                     <AppIcon name="chevron-left" />
@@ -19,7 +19,7 @@
                     v-if="images.length > 1"
                     class="lightbox-next"
                     type="button"
-                    aria-label="下一张"
+                    :aria-label="t('下一张')"
                     @click="$emit('update:index', (index + 1) % images.length)"
                 >
                     <AppIcon name="chevron-right" />
@@ -33,6 +33,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted } from 'vue'
 import AppIcon from './AppIcon.vue'
+import { t } from '../lib/i18n'
 
 const props = defineProps({
     images: { type: Array, default: () => [] },

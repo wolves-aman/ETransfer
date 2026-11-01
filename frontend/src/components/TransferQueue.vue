@@ -7,9 +7,9 @@
             <aside v-if="open" class="drawer">
                 <div class="drawer-head">
                     <AppIcon name="upload" />
-                    <strong>传输队列</strong>
+                    <strong>{{ t('传输队列') }}</strong>
                     <span class="mono-label">{{ items.length }} ITEMS</span>
-                    <button class="drawer-close" type="button" aria-label="关闭" @click="$emit('close')">
+                    <button class="drawer-close" type="button" :aria-label="t('关闭')" @click="$emit('close')">
                         <AppIcon name="x" />
                     </button>
                 </div>
@@ -17,7 +17,7 @@
                 <div class="drawer-body">
                     <div v-if="!items.length" class="queue-empty">
                         <AppIcon name="upload" />
-                        <span>队列为空，拖入文件或从聊天框发送。</span>
+                        <span>{{ t('队列为空，拖入文件或从聊天框发送。') }}</span>
                     </div>
 
                     <div v-for="item in items" :key="item.id" class="queue-item">
@@ -27,7 +27,7 @@
                                 <strong>{{ item.name }}</strong>
                                 <small>
                                     {{ formatBytes(item.size) }}
-                                    <template v-if="item.parts.length"> · {{ item.parts.length }} 个对端</template>
+                                    <template v-if="item.parts.length"> · {{ t('{n} 个对端', { n: item.parts.length }) }}</template>
                                     · {{ statusLabel(item) }}
                                 </small>
                             </div>
@@ -35,19 +35,19 @@
                                 <button
                                     v-if="item.status === 'active'"
                                     type="button"
-                                    title="暂停"
+                                    :title="t('暂停')"
                                     @click="$emit('pause', item)"
                                 ><AppIcon name="pause" /></button>
                                 <button
                                     v-if="item.status === 'paused'"
                                     type="button"
-                                    title="继续"
+                                    :title="t('继续')"
                                     @click="$emit('resume', item)"
                                 ><AppIcon name="play" /></button>
                                 <button
                                     v-if="!['done', 'canceled', 'error'].includes(item.status)"
                                     type="button"
-                                    title="取消"
+                                    :title="t('取消')"
                                     @click="$emit('cancel', item)"
                                 ><AppIcon name="x" /></button>
                             </div>
@@ -72,7 +72,7 @@
 
                 <div class="drawer-foot">
                     <p class="panel-note" style="margin: 0">
-                        传输全部走 WebRTC DataChannel，不经过服务器。
+                        {{ t('传输全部走 WebRTC DataChannel，不经过服务器。') }}
                     </p>
                 </div>
             </aside>
@@ -82,6 +82,7 @@
 
 <script setup>
 import AppIcon from './AppIcon.vue'
+import { t } from '../lib/i18n'
 import {
     formatBytes,
     formatDuration,
@@ -103,12 +104,12 @@ function progressOf(item) {
 
 function statusLabel(item) {
     const map = {
-        queued: '排队中',
-        active: '传输中',
-        paused: '已暂停',
-        done: '已完成',
-        canceled: '已取消',
-        error: '失败'
+        queued: t('排队中'),
+        active: t('传输中'),
+        paused: t('已暂停'),
+        done: t('已完成'),
+        canceled: t('已取消'),
+        error: t('失败')
     }
     return map[item.status] || item.status
 }

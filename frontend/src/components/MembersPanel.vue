@@ -4,10 +4,10 @@
             <span class="peer-avatar">{{ initials(selfName) }}</span>
             <div class="peer-main">
                 <strong>
-                    {{ selfName || '我' }}
+                    {{ selfName || t('我') }}
                     <span v-if="selfIsHost" class="host-tag">HOST</span>
                 </strong>
-                <small><i></i> 本机 · {{ selfIsHost ? '房主' : '成员' }}</small>
+                <small><i></i> {{ t('本机') }} · {{ selfIsHost ? t('房主') : t('成员') }}</small>
             </div>
         </div>
 
@@ -20,14 +20,14 @@
                 </strong>
                 <small>
                     <i :class="{ off: !peer.chatReady }"></i>
-                    {{ peer.chatReady ? '已连接' : (peer.connected ? '正在加密' : '连接中…') }}
+                    {{ peer.chatReady ? t('已连接') : (peer.connected ? t('正在加密') : t('连接中…')) }}
                 </small>
             </div>
             <button
                 v-if="selfIsHost && !peer.isHost"
                 class="peer-kick"
                 type="button"
-                title="移除成员"
+                :title="t('移除成员')"
                 @click="$emit('kick', peer.id)"
             >
                 <AppIcon name="x" />
@@ -39,6 +39,7 @@
 <script setup>
 import AppIcon from './AppIcon.vue'
 import { initials } from '../lib/format'
+import { t } from '../lib/i18n'
 
 defineProps({
     peers: { type: Array, default: () => [] },

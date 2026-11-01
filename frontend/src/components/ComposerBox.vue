@@ -1,14 +1,14 @@
 <template>
     <div class="composer">
         <p v-if="!canSend" class="composer-warning">
-            正在建立 P2P 数据通道，消息会在通道就绪后可用。
+            {{ t('正在建立 P2P 数据通道，消息会在通道就绪后可用。') }}
         </p>
         <div class="composer-box">
             <textarea
                 ref="input"
                 v-model="text"
                 rows="1"
-                :placeholder="canSend ? '输入消息，或把文件拖进来…' : '等待通道建立…'"
+                :placeholder="canSend ? t('输入消息，或把文件拖进来…') : t('等待通道建立…')"
                 :disabled="!canSend"
                 @keydown.enter.exact.prevent="send"
                 @keydown.enter.shift.exact.prevent="newline"
@@ -16,27 +16,27 @@
                 @paste="onPaste"
             ></textarea>
             <div class="composer-bar">
-                <button class="icon-btn tip" type="button" data-tip="发送文件" :disabled="!canSend" @click="$emit('pick', 'file')">
+                <button class="icon-btn tip" type="button" :data-tip="t('发送文件')" :disabled="!canSend" @click="$emit('pick', 'file')">
                     <AppIcon name="paperclip" />
                 </button>
-                <button class="icon-btn tip" type="button" data-tip="发送图片" :disabled="!canSend" @click="$emit('pick', 'image')">
+                <button class="icon-btn tip" type="button" :data-tip="t('发送图片')" :disabled="!canSend" @click="$emit('pick', 'image')">
                     <AppIcon name="image" />
                 </button>
-                <button class="icon-btn tip" type="button" data-tip="发送文件夹" :disabled="!canSend" @click="$emit('pick', 'folder')">
+                <button class="icon-btn tip" type="button" :data-tip="t('发送文件夹')" :disabled="!canSend" @click="$emit('pick', 'folder')">
                     <AppIcon name="folder" />
                 </button>
-                <button class="icon-btn tip" type="button" data-tip="共享屏幕" :disabled="!canSend" @click="$emit('screen')">
+                <button class="icon-btn tip" type="button" :data-tip="t('共享屏幕')" :disabled="!canSend" @click="$emit('screen')">
                     <AppIcon name="monitor" />
                 </button>
-                <span class="composer-hint">ENTER 发送 · SHIFT+ENTER 换行</span>
+                <span class="composer-hint">{{ t('ENTER 发送 · SHIFT+ENTER 换行') }}</span>
                 <button class="send-btn" type="button" aria-label="发送" :disabled="!canSend || !text.trim()" @click="send">
                     <AppIcon name="send" />
                 </button>
             </div>
         </div>
         <div class="composer-foot">
-            <span>粘贴图片 / 拖入文件</span>
-            <span><AppIcon name="lock" /> 端到端加密</span>
+            <span>{{ t('粘贴图片 / 拖入文件') }}</span>
+            <span><AppIcon name="lock" /> {{ t('端到端加密') }}</span>
         </div>
     </div>
 </template>
@@ -44,6 +44,7 @@
 <script setup>
 import { nextTick, ref } from 'vue'
 import AppIcon from './AppIcon.vue'
+import { t } from '../lib/i18n'
 
 const props = defineProps({
     canSend: {
