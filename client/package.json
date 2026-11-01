@@ -9,9 +9,6 @@
   },
   "dependencies": {
     "core-js": "^3.8.3",
-    "dompurify": "^3.1.6",
-    "highlight.js": "^11.9.0",
-    "marked": "^4.3.0",
     "nanoid": "^5.0.6",
     "qrcode": "^1.5.3",
     "vue": "^3.4.21"

@@ -232,7 +232,6 @@
             @pause="actions.pauseTransfer"
             @resume="actions.resumeTransfer"
             @cancel="actions.cancelTransfer"
-            @relay="actions.relayTransfer"
         />
 
         <LogsPanel :open="state.ui.logsOpen" @close="state.ui.logsOpen = false" />

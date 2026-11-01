@@ -1,6 +1,6 @@
 # ETransfer 信令服务
 
-ETransfer 的信令 + HTTP 辅助服务：支持 WebSocket 和 POST+SSE 两种信令传输，负责房间生命周期、密码与有效期、成员管理、SDP / ICE 转发、链接预览和可选的文件中继。**普通文件、聊天与媒体不经过这里。**
+ETransfer 的纯信令服务：支持 WebSocket 和 POST+SSE 两种传输，负责房间生命周期、密码与有效期、成员管理、SDP / ICE 转发。**文件、图片、聊天、音视频全部走 WebRTC，不经过这里。**
 
 ## 目录
 
@@ -12,8 +12,7 @@ server/
 ├── logger.js           # 单行 JSON 日志
 ├── protocol.js         # 消息解析、房间号/密码校验
 ├── sse.js              # POST + SSE 信令传输
-├── http-api.js         # /health、/api/events、/api/signal、预览与中继
-├── relay-store.js      # 本地磁盘中继（可替换为 S3/OSS）
+├── http-api.js         # /health、/api/events、/api/signal
 ├── room/room.js        # Room / RoomRegistry
 └── test/               # node:test
 ```
@@ -44,14 +43,8 @@ npm test
 | `HEARTBEAT_INTERVAL` | `30000` | 服务端 ping 间隔 |
 | `RATE_LIMIT_WINDOW` / `RATE_LIMIT_MAX` | `10000` / `200` | 单连接限流 |
 | `ALLOWED_ORIGINS` | 空 | 允许的 Origin，逗号分隔；空表示不校验 |
-| `SWEEP_INTERVAL` | `30000` | 过期房间/中继清理间隔 |
+| `SWEEP_INTERVAL` | `30000` | 过期房间清理间隔 |
 | `LOG_LEVEL` | `info` | `debug/info/warn/error/silent` |
-| `RELAY_ENABLED` | `true` | 是否启用 `/api/relay` |
-| `RELAY_DIR` | `server/data/relay` | 中继文件目录 |
-| `RELAY_MAX_BYTES` | `209715200` | 单文件中继上限（200MB） |
-| `RELAY_TTL` | `86400000` | 中继文件 TTL（24h） |
-| `PREVIEW_TIMEOUT` | `5000` | 链接预览抓取超时 |
-| `PREVIEW_MAX_BYTES` | `524288` | 预览 HTML 最大读取量 |
 
 ## WebSocket 协议
 
@@ -105,9 +98,6 @@ window.SIGNAL_TRANSPORT = 'sse'
 | `GET` | `/health` | 健康检查，包含 `sse: true` |
 | `GET` | `/api/events` | 建立 SSE 信令连接，首帧下发 client_id/token |
 | `POST` | `/api/signal` | SSE 模式下发送上行信令，JSON body |
-| `GET` | `/api/link-preview?url=` | 服务端抓取 Open Graph，带 SSRF 防护（拒绝内网） |
-| `POST` | `/api/relay` | 原样上传文件；`X-File-Name` / `X-File-Type` 头 |
-| `GET` | `/api/relay/:id` | 下载中继文件，TTL 后失效 |
 
 CORS：`ALLOWED_ORIGINS` 为空时允许 `*`，生产建议配置白名单。
 
@@ -133,4 +123,4 @@ HOST=127.0.0.1 PORT=9090 ALLOWED_ORIGINS=https://your-domain.com node server.js
 
 ## 测试
 
-`npm test` 覆盖协议解析、房间密码/容量/过期/一次性、房主迁移、踢人、Mesh 定向转发、Origin 白名单、健康检查、SSRF 防护、中继上传下载。
+`npm test` 覆盖协议解析、房间密码/容量/过期/一次性、房主迁移、踢人、Mesh 定向转发、Origin 白名单、健康检查与 SSE 信令。

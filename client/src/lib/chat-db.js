@@ -12,8 +12,7 @@ function plainMessage(message) {
         text: raw.text || '',
         ts: raw.ts,
         revoked: Boolean(raw.revoked),
-        image: raw.image || '',
-        preview: raw.preview ? { ...toRaw(raw.preview) } : null
+        image: raw.image || ''
     }
     if (raw.file) {
         const file = toRaw(raw.file)

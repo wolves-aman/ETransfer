@@ -3,7 +3,6 @@ import { WebSocketServer } from 'ws'
 import { createConfig } from './config.js'
 import { createLogger } from './logger.js'
 import { createHttpHandler } from './http-api.js'
-import { RelayStore } from './relay-store.js'
 import { SseHub } from './sse.js'
 import {
     ProtocolError,
@@ -50,7 +49,6 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
         maxUsers: config.maxUsers,
         roomIdLength: config.roomIdLength
     })
-    const relay = new RelayStore(config.relay)
 
     const sseHub = new SseHub({
         config,
@@ -59,7 +57,7 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
         getWsCount: () => wss.clients.size
     })
     const httpServer = http.createServer(
-        createHttpHandler({ config, logger: log, relay, sse: sseHub })
+        createHttpHandler({ config, logger: log, sse: sseHub })
     )
     const wss = new WebSocketServer({
         server: httpServer,
@@ -89,13 +87,12 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
     }, config.heartbeatInterval)
     heartbeatTimer.unref?.()
 
-    // 过期房间、过期中继文件清理。
+    // 过期房间清理。
     const sweepTimer = setInterval(() => {
         for (const room of registry.sweep()) {
             log.info('room_expired', { roomId: room.id })
             closeRoom(room, 'expired')
         }
-        relay.sweep().catch((error) => log.warn('relay_sweep_failed', { error: error.message }))
     }, config.sweepInterval)
     sweepTimer.unref?.()
 
@@ -571,7 +568,6 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
                     host: address.address,
                     port: address.port,
                     maxPayload: config.maxPayload,
-                    relay: config.relay.enabled,
                     sse: true
                 })
                 resolve(address)
@@ -607,7 +603,6 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
         httpServer,
         wss,
         registry,
-        relay,
         config,
         logger: log,
         listen,

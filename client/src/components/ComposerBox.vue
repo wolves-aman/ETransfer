@@ -8,7 +8,7 @@
                 ref="input"
                 v-model="text"
                 rows="1"
-                :placeholder="canSend ? '输入消息，支持 Markdown / 代码块，或把文件拖进来…' : '等待通道建立…'"
+                :placeholder="canSend ? '输入消息，或把文件拖进来…' : '等待通道建立…'"
                 :disabled="!canSend"
                 @keydown.enter.exact.prevent="send"
                 @keydown.enter.shift.exact.prevent="newline"
@@ -35,7 +35,7 @@
             </div>
         </div>
         <div class="composer-foot">
-            <span>支持 MARKDOWN / 代码块 / 粘贴图片</span>
+            <span>粘贴图片 / 拖入文件</span>
             <span><AppIcon name="lock" /> 端到端加密</span>
         </div>
     </div>

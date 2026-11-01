@@ -45,7 +45,7 @@
                                     @click="$emit('resume', item)"
                                 ><AppIcon name="play" /></button>
                                 <button
-                                    v-if="!['done', 'canceled', 'error', 'relayed'].includes(item.status)"
+                                    v-if="!['done', 'canceled', 'error'].includes(item.status)"
                                     type="button"
                                     title="取消"
                                     @click="$emit('cancel', item)"
@@ -67,29 +67,12 @@
                         </div>
 
                         <div v-if="item.error" class="queue-error">{{ item.error }}</div>
-
-                        <div v-if="item.status === 'error'" class="queue-relay">
-                            <AppIcon name="alert" />
-                            <span>P2P 未成功，可改用服务器中转</span>
-                            <button
-                                type="button"
-                                :disabled="item.relay?.status === 'uploading'"
-                                @click="$emit('relay', item)"
-                            >
-                                {{ item.relay?.status === 'uploading' ? `上传 ${item.relay.progress}%` : '上传中转' }}
-                            </button>
-                        </div>
-
-                        <div v-if="item.status === 'relayed'" class="queue-relay">
-                            <AppIcon name="check" />
-                            <span>已通过服务器中转，下载链接已发送</span>
-                        </div>
                     </div>
                 </div>
 
                 <div class="drawer-foot">
                     <p class="panel-note" style="margin: 0">
-                        传输直接走 P2P DataChannel；只有你手动选择「上传中转」时才会经过服务器。
+                        传输全部走 WebRTC DataChannel，不经过服务器。
                     </p>
                 </div>
             </aside>
@@ -110,10 +93,10 @@ defineProps({
     items: { type: Array, default: () => [] }
 })
 
-defineEmits(['close', 'pause', 'resume', 'cancel', 'relay'])
+defineEmits(['close', 'pause', 'resume', 'cancel'])
 
 function progressOf(item) {
-    if (item.status === 'done' || item.status === 'relayed') return 100
+    if (item.status === 'done') return 100
     if (item.status === 'canceled') return item.progress || 0
     return Math.min(100, Math.round(item.progress || 0))
 }
@@ -125,8 +108,7 @@ function statusLabel(item) {
         paused: '已暂停',
         done: '已完成',
         canceled: '已取消',
-        error: '失败',
-        relayed: '已中转'
+        error: '失败'
     }
     return map[item.status] || item.status
 }

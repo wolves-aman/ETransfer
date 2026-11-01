@@ -54,7 +54,6 @@ export class TransferManager {
                 eta: null,
                 error: '',
                 parts: [],
-                relay: null,
                 _resume: null,
                 _resumeWaiters: [],
                 _closed: false
@@ -255,7 +254,7 @@ export class TransferManager {
     }
 
     cancel(item) {
-        if (['done', 'canceled', 'error', 'relayed'].includes(item.status)) return
+        if (['done', 'canceled', 'error'].includes(item.status)) return
         item.status = 'canceled'
         const waiters = item._resumeWaiters.splice(0)
         waiters.forEach((resolve) => resolve())

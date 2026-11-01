@@ -1,10 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
-import { mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import path from 'node:path'
-
 import WebSocket from 'ws'
 import { createSignalingServer } from '../app.js'
 import { createLogger } from '../logger.js'
@@ -12,7 +8,6 @@ import { createLogger } from '../logger.js'
 const silentLogger = createLogger({ level: 'silent' })
 
 async function startServer(overrides = {}) {
-    const relayDir = await mkdtemp(path.join(tmpdir(), 'etransfer-relay-'))
     const app = createSignalingServer({
         config: {
             host: '127.0.0.1',
@@ -20,7 +15,6 @@ async function startServer(overrides = {}) {
             shutdownTimeout: 200,
             heartbeatInterval: 60_000,
             sweepInterval: 60_000,
-            relay: { dir: relayDir, enabled: true, maxBytes: 1024 * 1024, ttlMs: 60_000 },
             ...overrides
         },
         logger: silentLogger
@@ -28,7 +22,6 @@ async function startServer(overrides = {}) {
     const address = await app.listen(0, '127.0.0.1')
     return {
         app,
-        relayDir,
         wsUrl: `ws://127.0.0.1:${address.port}`,
         httpUrl: `http://127.0.0.1:${address.port}`
     }
@@ -109,10 +102,9 @@ async function joinRoom(client, roomId, overrides = {}) {
 }
 
 test('创建房间 -> 加入 -> mesh 目标转发 -> 离开通知', async (t) => {
-    const { app, relayDir, wsUrl } = await startServer()
+    const { app, wsUrl } = await startServer()
     t.after(async () => {
         await app.close()
-        await rm(relayDir, { recursive: true, force: true })
     })
 
     const host = await connect(wsUrl)
@@ -150,10 +142,9 @@ test('创建房间 -> 加入 -> mesh 目标转发 -> 离开通知', async (t) =>
 })
 
 test('房间密码：缺失 / 错误 / 正确', async (t) => {
-    const { app, relayDir, wsUrl } = await startServer()
+    const { app, wsUrl } = await startServer()
     t.after(async () => {
         await app.close()
-        await rm(relayDir, { recursive: true, force: true })
     })
 
     const host = await connect(wsUrl)
@@ -172,10 +163,9 @@ test('房间密码：缺失 / 错误 / 正确', async (t) => {
 })
 
 test('多人 mesh：成员列表与定向转发', async (t) => {
-    const { app, relayDir, wsUrl } = await startServer()
+    const { app, wsUrl } = await startServer()
     t.after(async () => {
         await app.close()
-        await rm(relayDir, { recursive: true, force: true })
     })
 
     const host = await connect(wsUrl)
@@ -219,10 +209,9 @@ test('多人 mesh：成员列表与定向转发', async (t) => {
 })
 
 test('房主踢人与一次性房间关闭', async (t) => {
-    const { app, relayDir, wsUrl } = await startServer()
+    const { app, wsUrl } = await startServer()
     t.after(async () => {
         await app.close()
-        await rm(relayDir, { recursive: true, force: true })
     })
 
     const host = await connect(wsUrl)
@@ -264,10 +253,9 @@ test('房主踢人与一次性房间关闭', async (t) => {
 })
 
 test('房间过期自动关闭', async (t) => {
-    const { app, relayDir, wsUrl } = await startServer({ sweepInterval: 50 })
+    const { app, wsUrl } = await startServer({ sweepInterval: 50 })
     t.after(async () => {
         await app.close()
-        await rm(relayDir, { recursive: true, force: true })
     })
 
     const host = await connect(wsUrl)
@@ -282,12 +270,11 @@ test('房间过期自动关闭', async (t) => {
 })
 
 test('ALLOWED_ORIGINS 白名单', async (t) => {
-    const { app, relayDir, wsUrl } = await startServer({
+    const { app, wsUrl } = await startServer({
         allowedOrigins: ['https://allowed.example']
     })
     t.after(async () => {
         await app.close()
-        await rm(relayDir, { recursive: true, force: true })
     })
 
     const rejected = new WebSocket(wsUrl, { origin: 'https://evil.example' })
@@ -299,39 +286,17 @@ test('ALLOWED_ORIGINS 白名单', async (t) => {
     allowed.close()
 })
 
-test('HTTP 健康检查、链接预览 SSRF 防护与中继上传下载', async (t) => {
-    const { app, relayDir, httpUrl } = await startServer()
+test('HTTP 健康检查', async (t) => {
+    const { app, httpUrl } = await startServer()
     t.after(async () => {
         await app.close()
-        await rm(relayDir, { recursive: true, force: true })
     })
 
     const health = await fetch(`${httpUrl}/health`)
     assert.equal(health.status, 200)
-    assert.equal((await health.json()).status, 'ok')
-
-    const privatePreview = await fetch(
-        `${httpUrl}/api/link-preview?url=${encodeURIComponent('http://127.0.0.1:8080/secret')}`
-    )
-    assert.equal(privatePreview.status, 400)
-    assert.equal((await privatePreview.json()).code, 'PRIVATE_URL')
-
-    const content = Buffer.from('relay payload 你好', 'utf8')
-    const upload = await fetch(`${httpUrl}/api/relay`, {
-        method: 'POST',
-        headers: {
-            'x-file-name': encodeURIComponent('hello.txt'),
-            'x-file-type': 'text/plain'
-        },
-        body: content
-    })
-    assert.equal(upload.status, 200)
-    const meta = await upload.json()
-    assert.equal(meta.size, content.byteLength)
-
-    const download = await fetch(`${httpUrl}${meta.url}`)
-    assert.equal(download.status, 200)
-    assert.equal(Buffer.from(await download.arrayBuffer()).toString('utf8'), 'relay payload 你好')
+    const body = await health.json()
+    assert.equal(body.status, 'ok')
+    assert.equal(body.sse, true)
 })
 
 async function openSse(httpUrl) {
@@ -393,14 +358,13 @@ async function postSignal(httpUrl, body) {
 }
 
 test('POST + SSE：创建、加入与定向转发', async (t) => {
-    const { app, relayDir, httpUrl } = await startServer()
+    const { app, httpUrl } = await startServer()
     const owner = await openSse(httpUrl)
     const guest = await openSse(httpUrl)
     t.after(async () => {
         owner.close()
         guest.close()
         await app.close()
-        await rm(relayDir, { recursive: true, force: true })
     })
 
     const ownerConnected = await owner.next()

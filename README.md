@@ -7,7 +7,7 @@
 基于 WebRTC 的浏览器点对点传输工具。文件、图片、聊天与屏幕画面在参与者之间加密直连，服务器只负责房间与信令，不保存文件内容。
 
 - 前端：Vue 3 + Vite 时代之前的 Vue CLI 5，**已移除 PrimeVue / PrimeFlex / PrimeIcons**，使用自研绿色霓虹设计系统
-- 后端：Node.js + `ws`，同时提供 WebSocket 与 POST+SSE 信令，负责房间、链接预览与可选中继
+- 后端：Node.js + `ws`，只负责房间与信令（WebSocket / POST+SSE），不转发文件、图片或聊天内容
 - 部署：纯静态前端 + Node 服务；或 Vercel 单项目 Functions（客户端 + 内存 SSE），支持 PWA / Share Target
 
 ## 界面预览
@@ -28,16 +28,15 @@
 | 房间 | 6 位短码、二维码邀请、房间密码、有效期、一次性房间、房主踢人、房主迁移、2~8 人 Mesh |
 | 传输 | 多文件 / 文件夹拖拽、传输队列、暂停 / 继续 / 取消、速度与剩余时间、背压控制、OPFS 流式落盘、接收确认 |
 | 分享 | 剪贴板图片、PWA Share Target（从系统分享面板发文件）、邀请链接 |
-| 沟通 | 文本 Markdown / 代码高亮、链接预览、图片画廊、消息持久化（IndexedDB）、搜索、撤回 |
+| 沟通 | 纯文本、图片画廊、消息持久化（IndexedDB）、搜索、撤回 |
 | 通话 | 麦克风、摄像头、屏幕共享（含系统音频）、多人 Mesh 媒体；屏幕共享独立浮窗，可拖动、缩放、最大化、全屏 |
-| 兜底 | P2P 失败时手动上传到服务器中继，生成短时下载链接 |
 | 可观测 | 仅房间内可见的终端风日志抽屉：信令、RTC、传输、媒体事件 |
 
 ## 架构
 
 ```
 浏览器 A ── WebSocket / POST+SSE ──┐
-                                   ├── 信令 / 房间 / 预览 / 中继（Node）
+                                   ├── 信令 / 房间（Node）
 浏览器 B ── WebSocket / POST+SSE ──┘
     │
     └──── WebRTC Mesh：DataChannel（聊天/文件）+ Media（音视频/屏幕）────┘
@@ -124,8 +123,7 @@ npm run build
 ```bash
 HOST=127.0.0.1 PORT=9090 \
 ALLOWED_ORIGINS=https://your-domain.com \
-MAX_USERS=8 RELAY_ENABLED=true \
-LOG_LEVEL=info npm start
+MAX_USERS=8 LOG_LEVEL=info npm start
 ```
 
 ## 生产部署
@@ -195,21 +193,13 @@ window.SIGNAL_TRANSPORT = 'sse'
 - 这是**纯内存单实例模式**：房间只存在当前 Function 实例里，Vercel 扩容到多实例或实例被回收后，房间会找不到、已加入的成员会丢失。
 - 适合演示、低流量、固定几个人使用；不适合多实例生产。
 - `api/sse.js` 的 `maxDuration` 当前为 300 秒，客户端会带 `client_id` / `token` 自动重连；如果重连落到新实例，内存里没有旧会话，需要重新创建/加入房间。
-- Vercel API 目前只移植了信令。`/api/link-preview` 和 `/api/relay` 仍需要独立 Node 服务或接 R2/S3；P2P 文件传输本身不受影响。
+- Vercel API 只提供信令；文件、图片、聊天、音视频全部由 WebRTC 直连，不经过服务器。
 
 ## PWA
 
 - `client/public/manifest.webmanifest` 声明安装信息与 Share Target。
 - `client/public/sw.js` 负责应用壳缓存和 `POST /share-target`：系统分享的文件写入 IndexedDB，随后跳回首页，进入房间后自动加入传输队列。
 - 仅在 `npm run build` 的产物中注册 Service Worker；开发环境不注册，避免缓存干扰。
-
-## 中继兜底
-
-默认把文件写到 `server/data/relay/`，元数据带 TTL，下载地址为随机 21 位 ID。
-
-- 传输失败时，传输队列里会出现「上传中转」按钮，需用户确认后才会把文件发往服务器。
-- 这是**本地磁盘存储适配器**，`server/relay-store.js` 的 `put/get/sweep` 接口可以直接替换为 S3 / OSS / R2 实现。
-- 生产环境应同时设置 `ALLOWED_ORIGINS`、`RELAY_MAX_BYTES`、`RELAY_TTL`，并定期清理。
 
 ## 大文件接收
 
@@ -230,7 +220,7 @@ window.SIGNAL_TRANSPORT = 'sse'
 
 ```
 client/                Vue 3 前端（自研 UI）
-server/                常驻 Node 信令 / 房间 / 预览 / 中继
+server/                常驻 Node 信令 / 房间
 api/                   Vercel Functions：SSE + POST 信令
 vercel.json            Vercel 单项目构建配置
 docs/screenshots/      README 界面截图

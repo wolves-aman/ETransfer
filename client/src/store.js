@@ -12,7 +12,6 @@ import { loadRoomMessages, saveMessage, updateMessage } from './lib/chat-db'
 import { idbTakeShares } from './lib/idb'
 import { compressImage, wrapFile } from './lib/files'
 import { cleanupIncoming } from './lib/opfs'
-import { uploadRelay } from './lib/relay'
 import { groupCode, formatBytes } from './lib/format'
 
 const NAME_KEY = 'etransfer-name'
@@ -741,31 +740,6 @@ export const actions = {
         updateMessage(message).catch(() => {})
         mesh.broadcast({ kind: 'recall', id: messageId })
         toast.success('消息已撤回')
-    },
-
-    async relayTransfer(item) {
-        const ok = await confirmDialog({
-            title: '服务器中转',
-            message: 'P2P 失败时可把文件传到服务器临时存储，再把下载链接发给对方。文件会在服务端保留一段时间，确认继续？',
-            confirmText: '上传中转',
-            tone: 'warn'
-        })
-        if (!ok) return
-
-        item.relay = { status: 'uploading', progress: 0, url: '' }
-        log.warn('transfer', '开始服务器中继', { file: item.name, size: item.size })
-        try {
-            const result = await uploadRelay(item.file, (progress) => {
-                if (item.relay) item.relay.progress = progress
-            })
-            item.relay = { status: 'done', progress: 100, url: result.absoluteUrl }
-            item.status = 'relayed'
-            this.sendText(`文件「${item.name}」已通过服务器中转：${result.absoluteUrl}`)
-            toast.success('中转完成', '下载链接已发送到聊天')
-        } catch (error) {
-            item.relay = { status: 'error', progress: 0, url: '', error: error.message }
-            toast.error('中转失败', error.message)
-        }
     },
 
     async shareScreen() {

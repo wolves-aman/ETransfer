@@ -17,28 +17,8 @@
             </template>
 
             <template v-else-if="message.type === 'text'">
-                <div class="bubble md">
-                    <div class="md-content" v-html="html"></div>
-                    <a
-                        v-if="preview"
-                        class="link-preview"
-                        :href="linkUrl"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        <img
-                            v-if="preview.image"
-                            :src="preview.image"
-                            alt=""
-                            loading="lazy"
-                            @error="$event.target.style.display = 'none'"
-                        >
-                        <div>
-                            <strong>{{ preview.title || preview.site }}</strong>
-                            <small v-if="preview.description">{{ preview.description }}</small>
-                            <em>{{ preview.site }}</em>
-                        </div>
-                    </a>
+                <div class="bubble text-bubble">
+                    <p class="text-content">{{ message.text }}</p>
                     <div v-if="mine" class="msg-actions">
                         <button type="button" title="复制" @click="copy"><AppIcon name="copy" /></button>
                         <button type="button" title="撤回" @click="$emit('recall', message.id)"><AppIcon name="trash" /></button>
@@ -103,11 +83,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed } from 'vue'
 import AppIcon from './AppIcon.vue'
 import { formatBytes, formatTime, initials, percent } from '../lib/format'
-import { renderMarkdown, findFirstUrl } from '../lib/markdown'
-import { getLinkPreview } from '../lib/link-preview'
 import { saveReceivedFile } from '../lib/download'
 import { copyText } from '../lib/clipboard'
 import { toast } from '../lib/feedback'
@@ -122,11 +100,8 @@ const props = defineProps({
 
 defineEmits(['open-image', 'recall'])
 
-const preview = ref(null)
 const mine = computed(() => Boolean(props.message.mine || props.message.from === state.self.id))
 const time = computed(() => formatTime(props.message.ts))
-const html = computed(() => props.message.type === 'text' ? renderMarkdown(props.message.text) : '')
-const linkUrl = computed(() => findFirstUrl(props.message.text || ''))
 
 const filePercent = computed(() => {
     const file = props.message.file
@@ -147,13 +122,6 @@ const canDownload = computed(() => Boolean(
     props.message.file?.blob || props.message.file?.opfsPath
 ))
 
-async function loadPreview() {
-    if (props.message.type !== 'text' || props.message.revoked) return
-    const url = linkUrl.value
-    if (!url) return
-    preview.value = await getLinkPreview(url)
-}
-
 async function download() {
     const file = props.message.file
     if (!file || !canDownload.value) {
@@ -173,7 +141,4 @@ async function copy() {
     const ok = await copyText(props.message.text || '')
     if (ok) toast.success('已复制')
 }
-
-onMounted(loadPreview)
-watch(() => [props.message.text, props.message.revoked], loadPreview)
 </script>

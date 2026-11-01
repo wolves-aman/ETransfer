@@ -5,8 +5,6 @@
  * 生产环境至少应设置 PORT、ALLOWED_ORIGINS，并在反向代理上启用 TLS（wss）。
  */
 
-import { fileURLToPath } from 'node:url'
-
 const toInteger = (value, fallback) => {
     const parsed = Number.parseInt(value ?? '', 10)
     return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback
@@ -21,11 +19,6 @@ const toList = (value) => String(value ?? '')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean)
-
-const toBoolean = (value, fallback) => {
-    if (value === undefined) return fallback
-    return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase())
-}
 
 const baseConfig = {
     // 监听地址与端口。HOST=0.0.0.0 才能被容器外/局域网访问。
@@ -72,22 +65,7 @@ const baseConfig = {
     logLevel: process.env.LOG_LEVEL || 'info',
 
     // 优雅关闭的最长等待时间。
-    shutdownTimeout: toInteger(process.env.SHUTDOWN_TIMEOUT, 5_000),
-
-    // 链接预览（服务端代为抓取，避免浏览器 CORS）。
-    preview: {
-        timeoutMs: toInteger(process.env.PREVIEW_TIMEOUT, 5_000),
-        maxBytes: toInteger(process.env.PREVIEW_MAX_BYTES, 512 * 1024),
-        cacheTtlMs: toInteger(process.env.PREVIEW_CACHE_TTL, 10 * 60 * 1000)
-    },
-
-    // P2P 失败时的中继兜底。默认为本机磁盘；S3/OSS 适配器可替换 relay-store 实现。
-    relay: {
-        enabled: toBoolean(process.env.RELAY_ENABLED, true),
-        dir: process.env.RELAY_DIR || fileURLToPath(new URL('./data/relay/', import.meta.url)),
-        maxBytes: toInteger(process.env.RELAY_MAX_BYTES, 200 * 1024 * 1024),
-        ttlMs: toInteger(process.env.RELAY_TTL, 24 * 60 * 60 * 1000)
-    }
+    shutdownTimeout: toInteger(process.env.SHUTDOWN_TIMEOUT, 5_000)
 }
 
 /**
@@ -104,14 +82,6 @@ export function createConfig(overrides = {}) {
         rateLimit: {
             ...baseConfig.rateLimit,
             ...(overrides.rateLimit || {})
-        },
-        preview: {
-            ...baseConfig.preview,
-            ...(overrides.preview || {})
-        },
-        relay: {
-            ...baseConfig.relay,
-            ...(overrides.relay || {})
         }
     }
 }
