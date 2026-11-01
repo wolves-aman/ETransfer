@@ -1,12 +1,9 @@
 .idea/
 node_modules/
-.vercel/
+client/node_modules/
+client/dist/
+server/data/
+server/*.exe
+server/etransfer-server
 .env
 .env.local
-client/node_modules/
-server/node_modules/
-client/pnpm-lock.yaml
-server/pnpm-lock.yaml
-server/ssl.pfx
-server/data/
-client/dist/

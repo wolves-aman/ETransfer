@@ -1,14 +1,10 @@
-<div align="center">
-<img src="./client/src/assets/logo.svg" width="360px" alt="ETransfer">
-</div>
-
-### ETransfer · 点对点文件、聊天与屏幕共享
+# ETransfer · 点对点文件、聊天与屏幕共享
 
 基于 WebRTC 的浏览器点对点传输工具。文件、图片、聊天与屏幕画面在参与者之间加密直连，服务器只负责房间与信令，不保存文件内容。
 
-- 前端：Vue 3 + Vite 时代之前的 Vue CLI 5，**已移除 PrimeVue / PrimeFlex / PrimeIcons**，使用自研绿色霓虹设计系统
-- 后端：Node.js + `ws`，只负责房间与信令（WebSocket / POST+SSE），不转发文件、图片或聊天内容
-- 部署：纯静态前端 + Node 服务；或 Vercel 单项目 Functions（客户端 + 内存 SSE），支持 PWA / Share Target
+- 前端：Vue 3 + Vue CLI，纯静态，构建到 `client/dist`
+- 后端：Go + Fiber，直接托管 `client/dist`，只提供 WS/SSE 信令
+- 传输：文件、聊天、音视频全部走 WebRTC DataChannel / MediaStream
 
 ## 界面预览
 
@@ -20,6 +16,12 @@
 
 <img src="./docs/screenshots/room.png" alt="ETransfer 房间" width="100%">
 
+### 邀请与日志
+
+<p align="center">
+  <img src="./docs/screenshots/invite.png" alt="二维码邀请" width="49%">
+  <img src="./docs/screenshots/logs.png" alt="房间日志" width="49%">
+</p>
 
 ## 功能
 
@@ -27,94 +29,108 @@
 |---|---|
 | 房间 | 6 位短码、二维码邀请、房间密码、有效期、一次性房间、房主踢人、房主迁移、2~8 人 Mesh |
 | 传输 | 多文件 / 文件夹拖拽、传输队列、暂停 / 继续 / 取消、速度与剩余时间、背压控制、OPFS 流式落盘、接收确认 |
-| 分享 | 剪贴板图片、PWA Share Target（从系统分享面板发文件）、邀请链接 |
+| 分享 | 剪贴板图片、PWA Share Target、邀请链接 |
 | 沟通 | 纯文本、图片画廊、消息持久化（IndexedDB）、搜索、撤回 |
-| 通话 | 麦克风、摄像头、屏幕共享（含系统音频）、多人 Mesh 媒体；屏幕共享独立浮窗，可拖动、缩放、最大化、全屏 |
-| 可观测 | 仅房间内可见的终端风日志抽屉：信令、RTC、传输、媒体事件 |
+| 通话 | 麦克风、摄像头、屏幕共享（含系统音频）、多人 Mesh 媒体；屏幕共享独立浮窗，可拖动、缩放、最大化、沉浸全屏 |
+| 可观测 | 仅房间内可见的日志抽屉：信令、RTC、传输、媒体事件 |
 
 ## 架构
 
-```
-浏览器 A ── WebSocket / POST+SSE ──┐
-                                   ├── 信令 / 房间（Node）
-浏览器 B ── WebSocket / POST+SSE ──┘
+```text
+浏览器 A ── WS / POST+SSE ──┐
+                            ├── Go + Fiber：房间 / 信令（唯一后端）
+浏览器 B ── WS / POST+SSE ──┘
     │
-    └──── WebRTC Mesh：DataChannel（聊天/文件）+ Media（音视频/屏幕）────┘
+    └── WebRTC Mesh：DataChannel（聊天/文件） + Media（音视频/屏幕）
 ```
+
+Go 服务同时托管：
+
+```text
+/                 client/dist 静态文件
+/ws               WebSocket 信令（SIGNAL_TRANSPORT=both|ws）
+/api/events       SSE 下行（SIGNAL_TRANSPORT=both|sse）
+/api/signal       SSE 上行
+/health           健康检查
+```
+
+## 快速开始
+
+要求 Node.js >= 18.17、Go >= 1.26。
+
+```bash
+# 1. 构建前端
+cd client
+npm install
+npm run build
+
+# 2. 启动 Go 服务（自动查找 client/dist）
+cd ../server
+go run .
+```
+
+打开 `http://localhost:9090`。
+
+Go 会优先使用 `STATIC_DIR`，默认 `client/dist`；在 `server` 目录运行时自动回退到 `../client/dist`。
 
 ## 信令传输
 
-默认走 WebSocket，也支持 **POST + SSE**，两种方式可以同时存在：
+默认同时启动 WebSocket 和 SSE：
 
-| 方式 | 入口 | 说明 |
-|---|---|---|
-| WebSocket | `ws://host:9090` | 默认，双向长连接 |
-| POST + SSE | `GET /api/events` + `POST /api/signal` | SSE 下行、POST 上行 |
+```bash
+SIGNAL_TRANSPORT=both go run .   # 默认
+SIGNAL_TRANSPORT=ws go run .     # 只开 WS
+SIGNAL_TRANSPORT=sse go run .    # 只开 SSE
+```
 
-切换方式：
+客户端默认 WebSocket；使用 SSE 时：
 
 ```js
 window.SIGNAL_TRANSPORT = 'sse'
 ```
 
-或者直接打开：
+或：
 
 ```text
-http://localhost:8080/?transport=sse
+http://localhost:9090/?transport=sse
 ```
 
-SSE 连接建立后服务端通过首帧下发 `client_id` 和 `token`，之后所有创建/加入/TRANSFER 消息都 POST 到 `/api/signal`。
+- `ws`：`/api/events`、`/api/signal` 返回 404
+- `sse`：不接受 `/ws` upgrade
+- `both`：两种同时可用
 
-注意：当前房间状态仍在单个 Node 进程内。SSE 适合 HTTP-only 代理或单实例 Serverless；多实例部署需要外部共享存储（如 Postgres）和跨实例广播。
-
-服务端默认同时启动两种传输，也可以只启动一种：
-
-```bash
-SIGNAL_TRANSPORT=both npm start   # 默认
-SIGNAL_TRANSPORT=ws npm start     # 只开 WebSocket
-SIGNAL_TRANSPORT=sse npm start    # 只开 SSE
-```
-
-`ws` 模式下 SSE 接口返回 404；`sse` 模式下不接受 WebSocket upgrade。客户端要选择对应的 `SIGNAL_TRANSPORT`。
-
-## 快速开始
-
-要求 Node.js >= 18.17。
-
-```bash
-# 1. 信令服务（9090）
-cd server
-npm install
-npm start
-
-# 2. 前端开发服务器（8080）
-cd client
-npm install
-npm run serve
-```
-
-打开 `http://localhost:8080`。开发模式下前端自动连接 `ws://localhost:9090` 与 `http://localhost:9090/api`。
-
-信令连接是按需建立的：首页加载时不会建立信令连接，只有点击「创建房间 / 加入房间」时才连接；离开房间后会自动断开。
-
-生产构建：
-
-```bash
-cd client
-npm run build
-# 产物在 client/dist，由 Nginx / CDN 托管
-```
+SSE 首帧返回 `client_id` + `token`，后续上行消息 POST 到 `/api/signal`。
 
 ## 配置
 
-### 前端
+| 环境变量 | 默认值 | 说明 |
+|---|---|---|
+| `HOST` / `PORT` | `0.0.0.0` / `9090` | 监听地址 |
+| `STATIC_DIR` | `client/dist` | 前端构建目录 |
+| `SIGNAL_TRANSPORT` | `both` | `both` / `ws` / `sse` |
+| `ALLOWED_ORIGINS` | 空 | CORS 白名单，逗号分隔 |
+| `MAX_USERS` | `8` | 单房间人数上限 |
+| `MAX_ROOM_ID_LENGTH` | `12` | 房间号最大长度 |
+| `DEFAULT_EXPIRY_MINUTES` | `180` | 默认有效期 |
+| `MAX_EXPIRY_MINUTES` | `1440` | 最长有效期 |
+| `MAX_PAYLOAD` | `65536` | 单条消息最大字节数 |
 
-在 `client/public/index.html` 中可覆盖：
+## PWA
+
+- `client/public/manifest.webmanifest` 声明安装信息与 Share Target
+- `client/public/sw.js` 缓存应用壳，并处理 `POST /share-target`
+- 仅生产构建注册 Service Worker
+
+## 大文件接收
+
+接收端优先使用 OPFS 流式写入，避免把大文件全部放进内存；不支持 OPFS 时退回内存，并限制在 128MB 内。发送端使用 64KB 分片、`bufferedAmount` 背压和接收端 ACK 窗口。
+
+## TURN
+
+公网或严格 NAT 环境需要 TURN：
 
 ```html
 <script>
-  window.WSURL = 'wss://your-domain.com/ws'
-  window.API_URL = ''
   window.WEBRTC_CONFIG = {
     iceServers: [
       { urls: 'stun:stun.example.com:3478' },
@@ -124,122 +140,17 @@ npm run build
 </script>
 ```
 
-未设置时：开发环境自动使用 `:9090`；生产环境默认同域 `/ws` 与 `/api`。
-
-### 服务端
-
-见 [server/README.md](./server/README.md)。常用变量：
-
-```bash
-HOST=127.0.0.1 PORT=9090 \
-ALLOWED_ORIGINS=https://your-domain.com \
-MAX_USERS=8 LOG_LEVEL=info npm start
-```
-
-## 生产部署
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name your-domain.com;
-    root /var/www/etransfer/dist;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    location /ws {
-        proxy_pass http://127.0.0.1:9090;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_read_timeout 120s;
-    }
-
-    location /api/ {
-        proxy_pass http://127.0.0.1:9090;
-        proxy_set_header Host $host;
-    }
-}
-```
-
-HTTPS 是麦克风、摄像头、屏幕共享和 Service Worker 的前提；本地 `localhost` 除外。
-
-## Vercel 单项目部署（客户端 + 内存 SSE）
-
-仓库里已经包含一个 Vercel 项目配置，可同时部署静态前端和 SSE：
-
-- `vercel.json`：构建 `client`，构建时设置 `VUE_APP_SIGNAL_TRANSPORT=sse`
-- `api/sse.js`：**同一个 Function** 同时处理 `GET /api/events`、`POST /api/signal`、`GET /api/health`
-- `api/_lib/store.js`：进程内 Map，**不使用 Redis**
-- `/api/events`、`/api/signal` 通过 `vercel.json` 的 rewrites 进入 `/api/sse`
-
-### 步骤
-
-1. Vercel 导入仓库，**Root Directory 保持仓库根目录**（不要选 `client`）
-2. 直接 Deploy，不需要任何数据库或环境变量
-3. 打开 `https://your-app.vercel.app`
-4. 访问 `/api/health`，正常返回：
-
-```json
-{ "status": "ok", "sse": true, "store": "memory" }
-```
-
-`.vercel.app` 域名会自动使用 SSE；绑定自定义域名时，在 Vercel 环境变量里加：
-
-```bash
-VUE_APP_SIGNAL_TRANSPORT=sse
-```
-
-或运行时设置：
-
-```js
-window.SIGNAL_TRANSPORT = 'sse'
-```
-
-### 必须知道
-
-- 这是**纯内存单实例模式**：房间只存在当前 Function 实例里，Vercel 扩容到多实例或实例被回收后，房间会找不到、已加入的成员会丢失。
-- 适合演示、低流量、固定几个人使用；不适合多实例生产。
-- `api/sse.js` 的 `maxDuration` 当前为 300 秒，客户端会带 `client_id` / `token` 自动重连；如果重连落到新实例，内存里没有旧会话，需要重新创建/加入房间。
-- Vercel API 只提供信令；文件、图片、聊天、音视频全部由 WebRTC 直连，不经过服务器。
-
-## PWA
-
-- `client/public/manifest.webmanifest` 声明安装信息与 Share Target。
-- `client/public/sw.js` 负责应用壳缓存和 `POST /share-target`：系统分享的文件写入 IndexedDB，随后跳回首页，进入房间后自动加入传输队列。
-- 仅在 `npm run build` 的产物中注册 Service Worker；开发环境不注册，避免缓存干扰。
-
-## 大文件接收
-
-- 发送端每次只读取 64KB 分片，并用 `bufferedAmount` + 接收端 8MB 确认窗口做双重背压，内存不随文件大小增长。
-- 接收端把每个分片直接写入 **OPFS**（Origin Private File System），JS 堆中不保留整份文件；完成后再从 OPFS 流式「另存为」或下载。
-- 不支持 OPFS 的浏览器退回内存聚合，并限制单文件 128MB，超过会拒绝并提示改用服务器中转。
-- OPFS 缓存会在启动时清理 7 天未访问的文件；接收中的缓存会在取消/失败/离开时删除。
-
-## 已知限制
-
-- 刷新页面会断开当前 WebRTC 连接，需要用同一短码重新加入；房间历史消息会从 IndexedDB 恢复。
-- 暂停/继续只作用于当前会话，刷新后不会从断点续传。
-- 公网对称 NAT 下仍需要 TURN；项目默认只内置公共 STUN。
-- 房主身份绑定当前连接，刷新后房主会按服务端规则迁移给下一位成员。
-- 不支持 OPFS 且文件超过 128MB 时只能使用「上传中转」。
-
 ## 目录
 
-```
-client/                Vue 3 前端（自研 UI）
-server/                常驻 Node 信令 / 房间
-api/                   Vercel Functions：SSE + POST 信令
-vercel.json            Vercel 单项目构建配置
-docs/screenshots/      README 界面截图
+```text
+client/                Vue 3 前端
+server/                Go + Fiber 信令服务
+docs/screenshots/      README 截图
 ```
 
 ## 测试
 
 ```bash
-cd server && npm test      # 21 个单元 / 集成测试
-cd client && npm run lint  # ESLint
-cd client && npm run build # 生产构建验证
+cd server && go test ./...
+cd client && npm run lint && npm run build
 ```
