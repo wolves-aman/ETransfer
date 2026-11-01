@@ -4,6 +4,7 @@ import { createConfig } from './config.js'
 import { createLogger } from './logger.js'
 import { createHttpHandler } from './http-api.js'
 import { RelayStore } from './relay-store.js'
+import { SseHub } from './sse.js'
 import {
     ProtocolError,
     TRANSFER_TYPES,
@@ -51,14 +52,24 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
     })
     const relay = new RelayStore(config.relay)
 
+    const sseHub = new SseHub({
+        config,
+        logger: log,
+        acceptClient: (client, request) => acceptClient(client, request),
+        getWsCount: () => wss.clients.size
+    })
     const httpServer = http.createServer(
-        createHttpHandler({ config, logger: log, relay })
+        createHttpHandler({ config, logger: log, relay, sse: sseHub })
     )
     const wss = new WebSocketServer({
         server: httpServer,
         maxPayload: config.maxPayload,
         clientTracking: true
     })
+
+    function connectionCount() {
+        return wss.clients.size + sseHub.size
+    }
 
     // 服务端主动 ping；客户端 pong 后标记存活。半开连接会被 terminate。
     const heartbeatTimer = setInterval(() => {
@@ -102,12 +113,22 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
             return
         }
 
-        if (wss.clients.size > config.maxConnections) {
-            log.warn('connection_rejected_busy', { connections: wss.clients.size })
+        if (connectionCount() > config.maxConnections) {
+            log.warn('connection_rejected_busy', { connections: connectionCount() })
             client.close(1013, 'server busy')
             return
         }
 
+        acceptClient(client, request)
+    })
+
+    /**
+     * WebSocket 和 SSE 共用的连接初始化逻辑。
+     *
+     * @param {object} client
+     * @param {object} request
+     */
+    function acceptClient(client, request) {
         const session = {
             room: null,
             user: null,
@@ -130,18 +151,20 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
             leaveRoom(client, session, 'connection_closed')
             log.info('connection_closed', {
                 roomId,
+                transport: client.transport || 'ws',
                 code,
                 reason: reason.toString().slice(0, 120),
-                connections: wss.clients.size
+                connections: connectionCount()
             })
         })
 
         log.info('connection_open', {
             origin: request.headers.origin,
             ip: request.socket.remoteAddress,
-            connections: wss.clients.size
+            transport: client.transport || 'ws',
+            connections: connectionCount()
         })
-    })
+    }
 
     function handleMessage(client, session, raw) {
         if (!session.limiter.consume()) {
@@ -548,7 +571,8 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
                     host: address.address,
                     port: address.port,
                     maxPayload: config.maxPayload,
-                    relay: config.relay.enabled
+                    relay: config.relay.enabled,
+                    sse: true
                 })
                 resolve(address)
             }
@@ -562,6 +586,7 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
         clearInterval(heartbeatTimer)
         clearInterval(sweepTimer)
         return new Promise((resolve) => {
+            sseHub.close()
             for (const client of wss.clients) {
                 client.close(1001, 'server shutdown')
             }

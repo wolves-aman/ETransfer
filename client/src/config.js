@@ -13,9 +13,15 @@ const apiBase = window.API_URL !== undefined
         ? `${window.location.protocol}//${host}:9090`
         : ''
 
+const transportFromQuery = new URLSearchParams(window.location.search).get('transport')
+const signalTransport = String(
+    window.SIGNAL_TRANSPORT || transportFromQuery || 'ws'
+).toLowerCase()
+
 export const runtime = {
     wsUrl: window.WSURL || `${protocol}//${host}:9090`,
     apiBase,
+    signalTransport: signalTransport === 'sse' ? 'sse' : 'ws',
     iceServers: window.WEBRTC_CONFIG?.iceServers || [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' }

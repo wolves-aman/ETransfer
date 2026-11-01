@@ -333,3 +333,124 @@ test('HTTP 健康检查、链接预览 SSRF 防护与中继上传下载', async 
     assert.equal(download.status, 200)
     assert.equal(Buffer.from(await download.arrayBuffer()).toString('utf8'), 'relay payload 你好')
 })
+
+async function openSse(httpUrl) {
+    const controller = new AbortController()
+    const response = await fetch(`${httpUrl}/api/events`, {
+        signal: controller.signal,
+        headers: { Accept: 'text/event-stream' }
+    })
+    assert.equal(response.status, 200)
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    async function next(timeout = 5_000) {
+        const deadline = Date.now() + timeout
+        while (true) {
+            const split = buffer.indexOf('\n\n')
+            if (split !== -1) {
+                const frame = buffer.slice(0, split)
+                buffer = buffer.slice(split + 2)
+                const data = frame
+                    .split('\n')
+                    .filter((line) => line.startsWith('data:'))
+                    .map((line) => line.slice(5).trimStart())
+                    .join('\n')
+                if (data) return JSON.parse(data)
+                continue
+            }
+
+            let timer
+            const timeoutPromise = new Promise((_, reject) => {
+                timer = setTimeout(() => reject(new Error('SSE 等待事件超时')), Math.max(1, deadline - Date.now()))
+            })
+            let result
+            try {
+                result = await Promise.race([reader.read(), timeoutPromise])
+            } finally {
+                clearTimeout(timer)
+            }
+            if (result.done) throw new Error('SSE 连接已关闭')
+            buffer += decoder.decode(result.value, { stream: true })
+        }
+    }
+
+    return {
+        next,
+        close: () => controller.abort()
+    }
+}
+
+async function postSignal(httpUrl, body) {
+    const response = await fetch(`${httpUrl}/api/signal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    })
+    assert.equal(response.status, 202)
+    assert.equal((await response.json()).ok, true)
+}
+
+test('POST + SSE：创建、加入与定向转发', async (t) => {
+    const { app, relayDir, httpUrl } = await startServer()
+    const owner = await openSse(httpUrl)
+    const guest = await openSse(httpUrl)
+    t.after(async () => {
+        owner.close()
+        guest.close()
+        await app.close()
+        await rm(relayDir, { recursive: true, force: true })
+    })
+
+    const ownerConnected = await owner.next()
+    assert.equal(ownerConnected.action, 'CONNECTED')
+    assert.match(ownerConnected.client_id, /^[A-Za-z0-9_-]{16}$/)
+    assert.match(ownerConnected.token, /^[A-Za-z0-9_-]{32}$/)
+
+    const guestConnected = await guest.next()
+    assert.equal(guestConnected.action, 'CONNECTED')
+
+    await postSignal(httpUrl, {
+        client_id: ownerConnected.client_id,
+        token: ownerConnected.token,
+        action: 'CREATE_ROOM',
+        room_id: 'SSE1',
+        name: 'Host'
+    })
+    const created = await owner.next()
+    assert.equal(created.action, 'CREATE_ROOM')
+    assert.equal(created.status, true)
+    assert.equal(created.room_id, 'SSE1')
+
+    await postSignal(httpUrl, {
+        client_id: guestConnected.client_id,
+        token: guestConnected.token,
+        action: 'JOIN_ROOM',
+        room_id: 'SSE1',
+        name: 'Guest'
+    })
+    const joined = await guest.next()
+    assert.equal(joined.action, 'JOIN_ROOM')
+    assert.equal(joined.status, true)
+    const peerJoined = await owner.next()
+    assert.equal(peerJoined.action, 'PEER_JOINED')
+    assert.equal(peerJoined.peer.id, joined.self_id)
+
+    await postSignal(httpUrl, {
+        client_id: ownerConnected.client_id,
+        token: ownerConnected.token,
+        action: 'TRANSFER',
+        target: joined.self_id,
+        type: 'offer',
+        offer: { type: 'offer', sdp: 'v=0' }
+    })
+    const transfer = await guest.next()
+    assert.equal(transfer.action, 'TRANSFER')
+    assert.equal(transfer.from, created.self_id)
+    assert.equal(transfer.offer.sdp, 'v=0')
+
+    const health = await (await fetch(`${httpUrl}/health`)).json()
+    assert.equal(health.sse, true)
+})
+

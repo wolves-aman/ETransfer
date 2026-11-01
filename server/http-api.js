@@ -169,10 +169,30 @@ function sendJson(res, status, payload) {
     res.end(body)
 }
 
+async function readJsonBody(req, maxBytes) {
+    const chunks = []
+    let total = 0
+    for await (const chunk of req) {
+        total += chunk.length
+        if (total > maxBytes) {
+            throw new RelayHttpError('请求体过大', 413, 'BODY_TOO_LARGE')
+        }
+        chunks.push(chunk)
+    }
+    if (!total) {
+        throw new RelayHttpError('请求体不能为空', 400, 'EMPTY_BODY')
+    }
+    try {
+        return JSON.parse(Buffer.concat(chunks).toString('utf8'))
+    } catch {
+        throw new RelayHttpError('请求体必须是 JSON', 400, 'INVALID_JSON')
+    }
+}
+
 /**
- * @param {{ config: object, logger: object, relay: import('./relay-store.js').RelayStore }} options
+ * @param {{ config: object, logger: object, relay: import('./relay-store.js').RelayStore, sse: import('./sse.js').SseHub }} options
  */
-export function createHttpHandler({ config, logger, relay }) {
+export function createHttpHandler({ config, logger, relay, sse }) {
     return async function handleHttp(req, res) {
         applyCors(req, res, config.allowedOrigins)
 
@@ -195,8 +215,28 @@ export function createHttpHandler({ config, logger, relay }) {
                 sendJson(res, 200, {
                     status: 'ok',
                     uptime: Math.round(process.uptime()),
-                    relay: config.relay.enabled
+                    relay: config.relay.enabled,
+                    sse: true
                 })
+                return
+            }
+
+            if (req.method === 'GET' && url.pathname === '/api/events') {
+                sse.open(req, res)
+                return
+            }
+
+            if (req.method === 'POST' && url.pathname === '/api/signal') {
+                const body = await readJsonBody(req, config.maxPayload)
+                const result = sse.signal(body)
+                if (!result.ok) {
+                    throw new RelayHttpError(
+                        result.error || 'SSE 信令失败',
+                        result.status || 400,
+                        result.code || 'SSE_SIGNAL_FAILED'
+                    )
+                }
+                sendJson(res, 202, { ok: true })
                 return
             }
 
@@ -289,6 +329,10 @@ export function createHttpHandler({ config, logger, relay }) {
                 path: url.pathname,
                 error: error.message
             })
+            if (res.headersSent) {
+                res.end()
+                return
+            }
             sendJson(res, 500, { error: '服务器处理请求失败' })
         }
     }

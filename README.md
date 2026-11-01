@@ -7,7 +7,7 @@
 基于 WebRTC 的浏览器点对点传输工具。文件、图片、聊天与屏幕画面在参与者之间加密直连，服务器只负责房间与信令，不保存文件内容。
 
 - 前端：Vue 3 + Vite 时代之前的 Vue CLI 5，**已移除 PrimeVue / PrimeFlex / PrimeIcons**，使用自研绿色霓虹设计系统
-- 后端：Node.js + `ws`，提供信令、房间管理、链接预览与可选中继
+- 后端：Node.js + `ws`，同时提供 WebSocket 与 POST+SSE 信令，负责房间、链接预览与可选中继
 - 部署：纯静态前端 + 一个 Node 服务，支持 PWA / Share Target
 
 ## 界面预览
@@ -36,12 +36,37 @@
 ## 架构
 
 ```
-浏览器 A ── WebSocket ──┐
-                        ├── 信令 / 房间 / 预览 / 中继（Node）
-浏览器 B ── WebSocket ──┘
+浏览器 A ── WebSocket / POST+SSE ──┐
+                                   ├── 信令 / 房间 / 预览 / 中继（Node）
+浏览器 B ── WebSocket / POST+SSE ──┘
     │
     └──── WebRTC Mesh：DataChannel（聊天/文件）+ Media（音视频/屏幕）────┘
 ```
+
+## 信令传输
+
+默认走 WebSocket，也支持 **POST + SSE**，两种方式可以同时存在：
+
+| 方式 | 入口 | 说明 |
+|---|---|---|
+| WebSocket | `ws://host:9090` | 默认，双向长连接 |
+| POST + SSE | `GET /api/events` + `POST /api/signal` | SSE 下行、POST 上行 |
+
+切换方式：
+
+```js
+window.SIGNAL_TRANSPORT = 'sse'
+```
+
+或者直接打开：
+
+```text
+http://localhost:8080/?transport=sse
+```
+
+SSE 连接建立后服务端通过首帧下发 `client_id` 和 `token`，之后所有创建/加入/TRANSFER 消息都 POST 到 `/api/signal`。
+
+注意：当前房间状态仍在单个 Node 进程内。SSE 适合 HTTP-only 代理或单实例 Serverless；多实例部署仍需要 Redis 共享房间状态和广播。SSE 断开后不会自动恢复房间，需要重新加入。
 
 ## 快速开始
 
@@ -61,7 +86,7 @@ npm run serve
 
 打开 `http://localhost:8080`。开发模式下前端自动连接 `ws://localhost:9090` 与 `http://localhost:9090/api`。
 
-信令连接是按需建立的：首页加载时不会连接 WebSocket，只有点击「创建房间 / 加入房间」时才连接；离开房间后会自动断开。
+信令连接是按需建立的：首页加载时不会建立信令连接，只有点击「创建房间 / 加入房间」时才连接；离开房间后会自动断开。
 
 生产构建：
 
@@ -173,7 +198,7 @@ docs/screenshots/      README 界面截图
 ## 测试
 
 ```bash
-cd server && npm test      # 20 个单元 / 集成测试
+cd server && npm test      # 21 个单元 / 集成测试
 cd client && npm run lint  # ESLint
 cd client && npm run build # 生产构建验证
 ```

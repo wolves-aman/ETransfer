@@ -1,6 +1,6 @@
 # ETransfer 信令服务
 
-ETransfer 的 WebSocket 信令 + HTTP 辅助服务：负责房间生命周期、密码与有效期、成员管理、SDP / ICE 转发、链接预览和可选的文件中继。**普通文件、聊天与媒体不经过这里。**
+ETransfer 的信令 + HTTP 辅助服务：支持 WebSocket 和 POST+SSE 两种信令传输，负责房间生命周期、密码与有效期、成员管理、SDP / ICE 转发、链接预览和可选的文件中继。**普通文件、聊天与媒体不经过这里。**
 
 ## 目录
 
@@ -11,7 +11,8 @@ server/
 ├── config.js           # 环境变量
 ├── logger.js           # 单行 JSON 日志
 ├── protocol.js         # 消息解析、房间号/密码校验
-├── http-api.js         # /health、/api/link-preview、/api/relay
+├── sse.js              # POST + SSE 信令传输
+├── http-api.js         # /health、/api/events、/api/signal、预览与中继
 ├── relay-store.js      # 本地磁盘中继（可替换为 S3/OSS）
 ├── room/room.js        # Room / RoomRegistry
 └── test/               # node:test
@@ -79,11 +80,31 @@ npm test
 
 一次性房间人数固定为 2，任一成员离开即关闭。普通房间房主离开时自动迁移给最早加入的成员。过期房间由 sweep 定时关闭。
 
+## 传输方式
+
+- **WebSocket**：`ws://host:9090`，默认方式，双向长连接。
+- **POST + SSE**：
+  1. `GET /api/events` 建立 SSE，首帧返回 `CONNECTED`、`client_id`、`token`；
+  2. `POST /api/signal` 携带 `client_id`、`token` 和普通信令消息；
+  3. 服务端通过 SSE 推送 `CREATE_ROOM`、`JOIN_ROOM`、`PEER_JOINED`、`TRANSFER` 等事件。
+
+两种连接共用同一个 `acceptClient` 和房间状态机。SSE 心跳由服务端注释行 + 客户端 `HEART_BEAT` POST 共同维持。
+
+客户端切换：
+
+```js
+window.SIGNAL_TRANSPORT = 'sse'
+```
+
+或使用查询参数 `?transport=sse`。
+
 ## HTTP API
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| `GET` | `/health` | 健康检查 |
+| `GET` | `/health` | 健康检查，包含 `sse: true` |
+| `GET` | `/api/events` | 建立 SSE 信令连接，首帧下发 client_id/token |
+| `POST` | `/api/signal` | SSE 模式下发送上行信令，JSON body |
 | `GET` | `/api/link-preview?url=` | 服务端抓取 Open Graph，带 SSRF 防护（拒绝内网） |
 | `POST` | `/api/relay` | 原样上传文件；`X-File-Name` / `X-File-Type` 头 |
 | `GET` | `/api/relay/:id` | 下载中继文件，TTL 后失效 |

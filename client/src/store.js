@@ -2,6 +2,7 @@ import { reactive } from 'vue'
 import { nanoid } from 'nanoid'
 import { runtime } from './config'
 import { SignalingClient } from './lib/signaling'
+import { SseSignalingClient } from './lib/signaling-sse'
 import { Mesh } from './lib/mesh'
 import { TransferManager } from './lib/transfers'
 import { MediaController } from './lib/media'
@@ -358,19 +359,28 @@ export const actions = {
         })
         state.media = media.state
 
-        signaling = new SignalingClient({
-            url: runtime.wsUrl,
-            onEvent: handleSignalingEvent,
-            onStatus: (status) => {
-                state.connection = status
-                if (status === 'offline') {
-                    state.connectionError = '无法连接信令服务'
-                }
-                if (status === 'online') {
-                    state.connectionError = ''
-                }
+        const handleStatus = (status) => {
+            state.connection = status
+            if (status === 'offline') {
+                state.connectionError = '无法连接信令服务'
             }
-        })
+            if (status === 'online') {
+                state.connectionError = ''
+            }
+        }
+
+        signaling = runtime.signalTransport === 'sse'
+            ? new SseSignalingClient({
+                onEvent: handleSignalingEvent,
+                onStatus: handleStatus
+            })
+            : new SignalingClient({
+                url: runtime.wsUrl,
+                onEvent: handleSignalingEvent,
+                onStatus: handleStatus
+            })
+
+        log.info('signal', '信令传输方式', { transport: runtime.signalTransport })
 
         mesh = new Mesh({
             iceServers: runtime.iceServers,
