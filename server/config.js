@@ -61,6 +61,12 @@ const baseConfig = {
     // 允许的浏览器 Origin，逗号分隔；为空表示不校验（仅建议开发环境）。
     allowedOrigins: toList(process.env.ALLOWED_ORIGINS),
 
+    // 信令传输：both = WebSocket + SSE，ws = 只开 WS，sse = 只开 SSE
+    signalTransport: (() => {
+        const value = String(process.env.SIGNAL_TRANSPORT || 'both').toLowerCase()
+        return ['ws', 'sse', 'both'].includes(value) ? value : 'both'
+    })(),
+
     // 日志级别：debug | info | warn | error | silent
     logLevel: process.env.LOG_LEVEL || 'info',
 

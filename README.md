@@ -67,6 +67,16 @@ SSE 连接建立后服务端通过首帧下发 `client_id` 和 `token`，之后�
 
 注意：当前房间状态仍在单个 Node 进程内。SSE 适合 HTTP-only 代理或单实例 Serverless；多实例部署需要外部共享存储（如 Postgres）和跨实例广播。
 
+服务端默认同时启动两种传输，也可以只启动一种：
+
+```bash
+SIGNAL_TRANSPORT=both npm start   # 默认
+SIGNAL_TRANSPORT=ws npm start     # 只开 WebSocket
+SIGNAL_TRANSPORT=sse npm start    # 只开 SSE
+```
+
+`ws` 模式下 SSE 接口返回 404；`sse` 模式下不接受 WebSocket upgrade。客户端要选择对应的 `SIGNAL_TRANSPORT`。
+
 ## 快速开始
 
 要求 Node.js >= 18.17。

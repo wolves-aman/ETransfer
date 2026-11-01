@@ -50,23 +50,37 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
         roomIdLength: config.roomIdLength
     })
 
-    const sseHub = new SseHub({
-        config,
-        logger: log,
-        acceptClient: (client, request) => acceptClient(client, request),
-        getWsCount: () => wss.clients.size
-    })
+    const transport = config.signalTransport
+    const wsEnabled = transport !== 'sse'
+    const sseEnabled = transport !== 'ws'
+
+    const sseHub = sseEnabled
+        ? new SseHub({
+            config,
+            logger: log,
+            acceptClient: (client, request) => acceptClient(client, request),
+            getWsCount: () => wss.clients.size
+        })
+        : null
     const httpServer = http.createServer(
         createHttpHandler({ config, logger: log, sse: sseHub })
     )
     const wss = new WebSocketServer({
-        server: httpServer,
+        noServer: true,
         maxPayload: config.maxPayload,
         clientTracking: true
     })
 
+    if (wsEnabled) {
+        httpServer.on('upgrade', (request, socket, head) => {
+            wss.handleUpgrade(request, socket, head, (client) => {
+                wss.emit('connection', client, request)
+            })
+        })
+    }
+
     function connectionCount() {
-        return wss.clients.size + sseHub.size
+        return wss.clients.size + (sseHub?.size || 0)
     }
 
     // 服务端主动 ping；客户端 pong 后标记存活。半开连接会被 terminate。
@@ -568,7 +582,8 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
                     host: address.address,
                     port: address.port,
                     maxPayload: config.maxPayload,
-                    sse: true
+                    transport,
+                    sse: sseEnabled
                 })
                 resolve(address)
             }
@@ -582,7 +597,7 @@ export function createSignalingServer({ config: overrides = {}, logger } = {}) {
         clearInterval(heartbeatTimer)
         clearInterval(sweepTimer)
         return new Promise((resolve) => {
-            sseHub.close()
+            sseHub?.close()
             for (const client of wss.clients) {
                 client.close(1001, 'server shutdown')
             }

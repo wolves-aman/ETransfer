@@ -71,17 +71,25 @@ export function createHttpHandler({ config, logger, sse }) {
                 send(res, 200, {
                     status: 'ok',
                     uptime: Math.round(process.uptime()),
-                    sse: true
+                    sse: Boolean(sse)
                 })
                 return
             }
 
             if (req.method === 'GET' && url.pathname === '/api/events') {
+                if (!sse) {
+                    send(res, 404, { error: 'SSE 未启用', code: 'SSE_DISABLED' })
+                    return
+                }
                 sse.open(req, res)
                 return
             }
 
             if (req.method === 'POST' && url.pathname === '/api/signal') {
+                if (!sse) {
+                    send(res, 404, { error: 'SSE 未启用', code: 'SSE_DISABLED' })
+                    return
+                }
                 const body = await readJsonBody(req, config.maxPayload)
                 const result = sse.signal(body)
                 if (!result.ok) {

@@ -33,6 +33,7 @@ npm test
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `HOST` / `PORT` | `0.0.0.0` / `9090` | 监听地址 |
+| `SIGNAL_TRANSPORT` | `both` | `both` / `ws` / `sse`，选择启动哪种信令传输 |
 | `MAX_PAYLOAD` | `65536` | 单条 WebSocket 消息最大字节数 |
 | `MAX_CONNECTIONS` | `10000` | 最大并发连接 |
 | `MAX_ROOMS` | `5000` | 最大房间数 |
@@ -82,6 +83,15 @@ npm test
   3. 服务端通过 SSE 推送 `CREATE_ROOM`、`JOIN_ROOM`、`PEER_JOINED`、`TRANSFER` 等事件。
 
 两种连接共用同一个 `acceptClient` 和房间状态机。SSE 心跳由服务端注释行 + 客户端 `HEART_BEAT` POST 共同维持。
+
+默认同时启动 WebSocket 和 SSE。只启动一种：
+
+```bash
+SIGNAL_TRANSPORT=ws npm start
+SIGNAL_TRANSPORT=sse npm start
+```
+
+`SIGNAL_TRANSPORT=ws` 时 `/api/events` 与 `/api/signal` 返回 404；`SIGNAL_TRANSPORT=sse` 时不会处理 WebSocket upgrade。`both` 为默认值。
 
 客户端切换：
 
