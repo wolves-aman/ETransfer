@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
 import { nanoid } from 'nanoid'
-import { runtime } from './config'
+import { runtime, apiUrl } from './config'
 import { SignalingClient } from './lib/signaling'
 import { SseSignalingClient } from './lib/signaling-sse'
 import { Mesh } from './lib/mesh'
@@ -33,6 +33,9 @@ export const state = reactive({
     peers: [],
     messages: [],
     transfers: [],
+    stats: {
+        roomsCreated: null
+    },
     media: {
         active: false,
         micOn: false,
@@ -344,10 +347,22 @@ function createOutgoingMessage(message) {
 }
 
 export const actions = {
+    async loadStats() {
+        try {
+            const response = await fetch(apiUrl('/api/stats'), { cache: 'no-store' })
+            if (!response.ok) return
+            const data = await response.json()
+            state.stats.roomsCreated = Number.isFinite(data.rooms_created) ? data.rooms_created : null
+        } catch {
+            // 统计接口不可用时保持占位
+        }
+    },
+
     async init() {
         if (initialized) return
         initialized = true
         state.name = localStorage.getItem(NAME_KEY) || ''
+        this.loadStats()
 
         media = new MediaController({
             mesh: {
@@ -550,6 +565,7 @@ export const actions = {
                 max_users: maxUsers
             })
             await this.enterRoom(response, { password })
+            this.loadStats()
             toast.success(t('通道已创建'), t('短码 {code}', { code: groupCode(response.room_id) }))
         } catch (error) {
             toast.error(t('创建房间失败'), error.message)

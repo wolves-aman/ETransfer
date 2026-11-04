@@ -36,6 +36,7 @@
                     <div class="fact"><strong>0<small>KB</small></strong><span>{{ t('云端留存') }}</span></div>
                     <div class="fact"><strong>8<small>PEERS</small></strong><span>{{ t('Mesh 房间') }}</span></div>
                     <div class="fact"><strong>∞<small>SIZE</small></strong><span>{{ t('文件大小') }}</span></div>
+                    <div class="fact"><strong>{{ state.stats.roomsCreated ?? '—' }}<small>ROOMS</small></strong><span>{{ t('累计创建') }}</span></div>
                 </div>
 
                 <div class="chips" id="features">
@@ -210,7 +211,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import AppIcon from './AppIcon.vue'
 import BrandMark from './BrandMark.vue'
 import LangSwitch from './LangSwitch.vue'
@@ -255,6 +256,10 @@ const maxUserOptions = computed(() => [2, 4, 6, 8].map((value) => ({
 
 watch(() => form.oneTime, (value) => {
     if (value) form.maxUsers = 2
+})
+
+onMounted(() => {
+    actions.loadStats()
 })
 
 function switchMode(next) {

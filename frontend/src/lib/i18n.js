@@ -28,6 +28,7 @@ const english = {
     '房间短码需要 4~12 位。': 'Room code must be 4–12 characters.',
     '房间密码至少 4 位字符。': 'Room password must be at least 4 characters.',
     '操作失败，请稍后重试。': 'Something went wrong. Try again.',
+    '累计创建': 'Rooms created',
     '创建通道': 'Create channel',
     '加入通道': 'Join channel',
     '建立传输通道': 'Create a transfer channel',

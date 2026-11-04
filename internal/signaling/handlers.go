@@ -65,6 +65,7 @@ func (s *Server) createRoom(client *Client, session *Session, message map[string
 	session.Room = created
 	session.User = user
 	s.mu.Unlock()
+	s.recordRoomCreated()
 
 	client.SendJSON(fiber.Map{
 		"action": "CREATE_ROOM", "status": true,

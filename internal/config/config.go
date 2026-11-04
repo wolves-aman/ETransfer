@@ -22,6 +22,7 @@ type Config struct {
 	Heartbeat       time.Duration
 	Sweep           time.Duration
 	LogLevel        string
+	StatsFile       string
 }
 
 func Load() Config {
@@ -39,6 +40,7 @@ func Load() Config {
 		Heartbeat:       time.Duration(envInt("HEARTBEAT_INTERVAL", 30000)) * time.Millisecond,
 		Sweep:           time.Duration(envInt("SWEEP_INTERVAL", 30000)) * time.Millisecond,
 		LogLevel:        strings.ToLower(env("LOG_LEVEL", "info")),
+		StatsFile:       env("STATS_FILE", "data/stats.json"),
 	}
 	if cfg.Transport != "ws" && cfg.Transport != "sse" {
 		cfg.Transport = "both"

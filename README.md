@@ -33,6 +33,7 @@
 | 沟通 | 纯文本、图片画廊、消息持久化（IndexedDB）、搜索、撤回 |
 | 通话 | 麦克风、摄像头、屏幕共享（含系统音频）、多人 Mesh 媒体；屏幕共享独立浮窗，可拖动、缩放、最大化、沉浸全屏 |
 | 可观测 | 仅房间内可见的日志抽屉：信令、RTC、传输、媒体事件 |
+| 统计 | 首页显示累计创建房间数，服务端持久化到 `data/stats.json` |
 
 ## 多语言与移动端
 
@@ -57,6 +58,7 @@ Go 服务同时托管：
 /ws               WebSocket 信令（SIGNAL_TRANSPORT=both|ws）
 /api/events       SSE 下行（SIGNAL_TRANSPORT=both|sse）
 /api/signal       SSE 上行
+/api/stats        创建房间计数
 /health           健康检查
 ```
 
@@ -124,6 +126,7 @@ SSE 首帧返回 `client_id` + `token`，后续上行消息 POST 到 `/api/signa
 | `DEFAULT_EXPIRY_MINUTES` | `180` | 默认有效期 |
 | `MAX_EXPIRY_MINUTES` | `1440` | 最长有效期 |
 | `MAX_PAYLOAD` | `65536` | 单条消息最大字节数 |
+| `STATS_FILE` | `data/stats.json` | 房间创建计数持久化文件；留空则只保存在内存 |
 | `LOG_LEVEL` | `info` | `debug` / `info` / `warn` / `error` / `fatal` |
 
 ## 日志

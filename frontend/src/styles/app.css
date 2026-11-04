@@ -2470,3 +2470,15 @@ body {
         min-width: 0;
     }
 }
+
+
+.hero-facts {
+    flex-wrap: wrap;
+    row-gap: 18px;
+}
+
+@media (max-width: 760px) {
+    .hero-facts {
+        gap: 18px 26px;
+    }
+}

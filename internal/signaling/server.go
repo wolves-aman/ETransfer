@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gofiber/contrib/v3/websocket"
@@ -33,16 +34,21 @@ type Server struct {
 	sse      map[string]*Client
 	sseMu    sync.RWMutex
 	sessions map[room.Conn]*Session
+
+	roomsCreated atomic.Int64
+	statsMu      sync.Mutex
 }
 
 func New(cfg config.Config, logger *logging.Logger) *Server {
-	return &Server{
+	server := &Server{
 		cfg:      cfg,
 		logger:   logger,
 		registry: room.NewRegistry(),
 		sse:      make(map[string]*Client),
 		sessions: make(map[room.Conn]*Session),
 	}
+	server.roomsCreated.Store(loadRoomStats(cfg.StatsFile, logger))
+	return server
 }
 
 func (s *Server) HandleWS(conn *websocket.Conn) {

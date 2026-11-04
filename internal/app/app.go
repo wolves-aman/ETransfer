@@ -54,6 +54,7 @@ func New(cfg config.Config, server *signaling.Server, staticRoot fs.FS, logger *
 	})
 
 	app.Get("/health", server.Health)
+	app.Get("/api/stats", server.Stats)
 
 	if cfg.Transport != "ws" {
 		app.Get("/api/events", server.HandleSSE)
