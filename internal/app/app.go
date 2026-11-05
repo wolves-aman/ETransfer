@@ -18,7 +18,12 @@ import (
 
 func New(cfg config.Config, server *signaling.Server, staticRoot fs.FS, logger *logging.Logger) *fiber.App {
 	app := fiber.New(fiber.Config{
-		BodyLimit: cfg.MaxPayload,
+		BodyLimit:   cfg.MaxPayload,
+		TrustProxy:  true,
+		ProxyHeader: "X-Forwarded-For",
+		TrustProxyConfig: fiber.TrustProxyConfig{
+			Proxies: []string{"0.0.0.0/0"},
+		},
 	})
 
 	allowOrigins := []string{"*"}

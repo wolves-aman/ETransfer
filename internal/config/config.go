@@ -40,7 +40,7 @@ func Load() Config {
 		Heartbeat:       time.Duration(envInt("HEARTBEAT_INTERVAL", 30000)) * time.Millisecond,
 		Sweep:           time.Duration(envInt("SWEEP_INTERVAL", 30000)) * time.Millisecond,
 		LogLevel:        strings.ToLower(env("LOG_LEVEL", "info")),
-		StatsFile:       env("STATS_FILE", "data/stats.json"),
+		StatsFile:       env("STATS_FILE", "stats.json"),
 	}
 	if cfg.Transport != "ws" && cfg.Transport != "sse" {
 		cfg.Transport = "both"
