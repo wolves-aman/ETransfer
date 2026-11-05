@@ -23,6 +23,7 @@ type Config struct {
 	Sweep           time.Duration
 	LogLevel        string
 	StatsFile       string
+	ProxyHeader     string
 }
 
 func Load() Config {
@@ -41,6 +42,7 @@ func Load() Config {
 		Sweep:           time.Duration(envInt("SWEEP_INTERVAL", 30000)) * time.Millisecond,
 		LogLevel:        strings.ToLower(env("LOG_LEVEL", "info")),
 		StatsFile:       env("STATS_FILE", "stats.json"),
+		ProxyHeader:     env("PROXY_HEADER", "X-Forwarded-For"),
 	}
 	if cfg.Transport != "ws" && cfg.Transport != "sse" {
 		cfg.Transport = "both"

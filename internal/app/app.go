@@ -20,7 +20,7 @@ func New(cfg config.Config, server *signaling.Server, staticRoot fs.FS, logger *
 	app := fiber.New(fiber.Config{
 		BodyLimit:   cfg.MaxPayload,
 		TrustProxy:  true,
-		ProxyHeader: "X-Forwarded-For",
+		ProxyHeader: cfg.ProxyHeader,
 		TrustProxyConfig: fiber.TrustProxyConfig{
 			Proxies: []string{"0.0.0.0/0"},
 		},
